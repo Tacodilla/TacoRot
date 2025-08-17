@@ -1,0 +1,16 @@
+## Interface: 30300
+## Title: TacoRot
+## Notes: ConROC-style rotation helper for 3.3.5 (Epoch). Rank-aware, only-known spell suggestions.
+## Author: Steven
+## Version: 1.3-conroc-loop
+## SavedVariables: TacoRotDB
+
+embeds.xml
+Bindings.xml
+
+Compat-335.lua
+core.lua
+options.lua
+ui.lua
+warlock_ids.lua
+engine_warlock.lua
