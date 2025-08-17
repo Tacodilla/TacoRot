@@ -1,174 +1,168 @@
--- ui.lua — 3.3.5 safe.
--- Fixes cooldown :Clear() usage and keeps original frame names (TacoRotWindow, 2, 3).
--- Supports both ApplyIcon(...) and UI.Update(s1,s2,s3).
+-- ui.lua — TacoRot lightweight UI for 3.3.5
+-- Drag to move, saves position, safe spellID textures only, defensive DB init.
 
-local TacoRot = _G.TacoRot or {}
-_G.TacoRot = TacoRot
-TacoRot.UI = TacoRot.UI or {}
-local UI = TacoRot.UI
+local TR = _G.TacoRot or {}
+_G.TacoRot = TR
 
--- -----------------------
--- helpers
--- -----------------------
-local function Q() return "Interface\\Icons\\INV_Misc_QuestionMark" end
-local function SpellIcon(id) local _,_,tex = GetSpellInfo(id or 0); return tex or Q() end
-
--- 3.3.5-safe "clear cooldown"
-local function ClearCooldown(cd)
-  if not cd then return end
-  if CooldownFrame_SetTimer then
-    CooldownFrame_SetTimer(cd, 0, 0, 0)
-  else
-    cd:SetCooldown(0, 0)
-  end
+-- ===================== DB Helpers =====================
+local function EnsureDB()
+    _G.TacoRotDB = _G.TacoRotDB or {}
+    local DB = _G.TacoRotDB
+    DB.UI = DB.UI or {}
+    if DB.UI.locked == nil then DB.UI.locked = false end
+    if DB.UI.scale  == nil then DB.UI.scale  = 1.0  end
+    return DB
 end
 
-local function SetCooldown(cd, start, dur, enable)
-  if not cd then return end
-  if start and dur and dur > 0 and (enable == 1 or enable == true) then
-    if CooldownFrame_SetTimer then
-      CooldownFrame_SetTimer(cd, start, dur, 1)
-    else
-      cd:SetCooldown(start, dur)
+-- Call once at file load just in case
+EnsureDB()
+
+-- ===================== Icon Helpers =====================
+_G.TacoRotIconFallbacks = _G.TacoRotIconFallbacks or {}
+local fb = _G.TacoRotIconFallbacks
+
+local function SafeSpellTexture(id)
+    if type(id) == "number" and id > 0 then
+        local tex = GetSpellTexture(id)  -- correct for spellID on 3.3.5
+        if tex then return tex end
     end
-  else
-    ClearCooldown(cd)
-  end
+    return fb[id] or "Interface\\Icons\\INV_Misc_QuestionMark"
 end
 
--- -----------------------
--- frame factory
--- -----------------------
-local function CreateIconFrame(name, parent, size, tex)
-  local f = CreateFrame("Frame", name, parent)
-  f:SetSize(size, size)
-  f:SetFrameStrata("MEDIUM")
-  f:SetFrameLevel(73)
-  f:SetClampedToScreen(true)
-
-  f.tex = f:CreateTexture(nil, "ARTWORK")
-  f.tex:SetAllPoints(true)
-  f.tex:SetTexture(tex or Q())
-
-  f.cd = CreateFrame("Cooldown", name.."CD", f, "CooldownFrameTemplate")
-  f.cd:SetAllPoints(true)
-
-  -- pulsing border while casting (toggled by TacoRot:SetMainCastFlash)
-  f.border = f:CreateTexture(nil, "OVERLAY")
-  f.border:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
-  f.border:SetBlendMode("ADD")
-  f.border:SetAllPoints(true)
-  f.border:Hide()
-
-  f._pulseT, f._flashing = 0, false
-  f:SetScript("OnUpdate", function(self, e)
-    if not self._flashing then return end
-    self._pulseT = (self._pulseT + e * 2.8) % 2
-    local a = self._pulseT; if a > 1 then a = 2 - a end
-    self.border:SetAlpha(0.35 + 0.65 * a)
-  end)
-
-  return f
+local function EnableDrag(frame, enable)
+    if not frame then return end
+    frame:SetMovable(true)
+    frame:SetClampedToScreen(true)
+    if enable then
+        frame:EnableMouse(true)
+        frame:RegisterForDrag("LeftButton")
+        frame:SetScript("OnDragStart", function(self) self:StartMoving() end)
+        frame:SetScript("OnDragStop", function(self)
+            self:StopMovingOrSizing()
+            -- save position of main window
+            if self == TacoRotWindow then
+                local DB = EnsureDB()
+                local point, rel, relPoint, x, y = self:GetPoint(1)
+                DB.UI.pos = { point, rel and rel:GetName() or "UIParent", relPoint, x, y }
+                DB.UI.scale = self:GetScale()
+            end
+        end)
+    else
+        frame:EnableMouse(false)
+        frame:RegisterForDrag()
+        frame:SetScript("OnDragStart", nil)
+        frame:SetScript("OnDragStop",  nil)
+    end
 end
 
--- -----------------------
--- build / init
--- -----------------------
-function TacoRot:CreateWindows()
-  if _G.TacoRotWindow then return end
+-- ===================== Frames ======================
+local function CreateIconFrame(name, parent, size, x, y)
+    local f = CreateFrame("Frame", name, parent or UIParent)
+    f:SetSize(size, size)
+    f:SetPoint("CENTER", UIParent, "CENTER", x or 0, y or 0)
+    f:SetFrameStrata("HIGH")
 
-  local p = (self.db and self.db.profile) or {}
-  local s = p.iconSize or 52
-  local n = p.nextScale or 0.82
+    local t = f:CreateTexture(nil, "ARTWORK")
+    t:SetAllPoints(f)
+    t:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+    f.icon = t
 
-  local anc = p.anchor or {"CENTER", UIParent, "CENTER", -200, 120}
-  local root = CreateFrame("Frame", "TacoRotAnchor", UIParent)
-  root:SetSize(1,1)
-  root:SetPoint(anc[1], anc[2] or UIParent, anc[3], anc[4], anc[5])
-
-  TacoRotWindow  = CreateIconFrame("TacoRotWindow",  root, s, Q())
-  TacoRotWindow2 = CreateIconFrame("TacoRotWindow2", root, math.floor(s*n), Q())
-  TacoRotWindow3 = CreateIconFrame("TacoRotWindow3", root, math.floor(s*n), Q())
-
-  TacoRotWindow:ClearAllPoints()
-  TacoRotWindow:SetPoint("CENTER", root, "CENTER", 0, 0)
-  TacoRotWindow2:SetPoint("LEFT", TacoRotWindow, "RIGHT", 3, 0)
-  TacoRotWindow3:SetPoint("LEFT", TacoRotWindow2, "RIGHT", 3, 0)
-
-  -- dragging (honors profile.unlock)
-  local function makeDrag(f)
-    f:RegisterForDrag("LeftButton")
-    f:SetMovable(true)
-    f:EnableMouse(true)
-    f:SetScript("OnDragStart", function(self)
-      local unlocked = TacoRot.db and TacoRot.db.profile and TacoRot.db.profile.unlock
-      if unlocked then self:StartMoving() end
-    end)
-    f:SetScript("OnDragStop", function(self)
-      self:StopMovingOrSizing()
-      local point, rel, relPoint, x, y = TacoRotWindow:GetPoint()
-      if TacoRot.db and TacoRot.db.profile then
-        TacoRot.db.profile.anchor = {point, rel or UIParent, relPoint, x, y}
-      end
-    end)
-  end
-  makeDrag(TacoRotWindow); makeDrag(TacoRotWindow2); makeDrag(TacoRotWindow3)
-
-  -- show/hide next windows from saved setting
-  if p.nextWindows == false then
-    TacoRotWindow2:Hide(); TacoRotWindow3:Hide()
-  else
-    TacoRotWindow2:Show(); TacoRotWindow3:Show()
-  end
+    f:Show()
+    return f
 end
 
--- create on login so engines can immediately paint
-do
-  local f = CreateFrame("Frame")
-  f:RegisterEvent("PLAYER_LOGIN")
-  f:SetScript("OnEvent", function() if TacoRot and TacoRot.CreateWindows then TacoRot:CreateWindows() end end)
+-- Main + two next icons (positions will be anchored off main)
+TacoRotWindow  = TacoRotWindow  or CreateIconFrame("TacoRotWindow",  UIParent, 52, -90, 0)
+TacoRotWindow2 = TacoRotWindow2 or CreateIconFrame("TacoRotWindow2", UIParent, 40, -40, 0)
+TacoRotWindow3 = TacoRotWindow3 or CreateIconFrame("TacoRotWindow3", UIParent, 32,   0, 0)
+
+local function AnchorSecondaries()
+    TacoRotWindow2:ClearAllPoints()
+    TacoRotWindow3:ClearAllPoints()
+    TacoRotWindow2:SetPoint("LEFT", TacoRotWindow, "RIGHT", 12, 0)
+    TacoRotWindow3:SetPoint("LEFT", TacoRotWindow2, "RIGHT", 10, 0)
 end
 
--- -----------------------
--- public APIs
--- -----------------------
--- Legacy: engines call this directly (Warlock/older)
-function TacoRot:ApplyIcon(frame, spellId)
-  if not frame or not frame.tex then
-    if not _G.TacoRotWindow then self:CreateWindows() end
-    frame = frame or _G.TacoRotWindow
-    if not frame or not frame.tex then return end
-  end
+local function RestoreUI()
+    local DB = EnsureDB()
+    local ui = DB.UI
 
-  if not spellId then
-    frame.tex:SetTexture(Q())
-    ClearCooldown(frame.cd)
-    return
-  end
+    local scale = tonumber(ui.scale) or 1.0
+    TacoRotWindow:SetScale(scale)
 
-  frame.tex:SetTexture(SpellIcon(spellId))
-  local start, dur, en = GetSpellCooldown(spellId)
-  SetCooldown(frame.cd, start, dur, en)
+    TacoRotWindow:ClearAllPoints()
+    if ui.pos and ui.pos[1] then
+        local p, relName, rp, x, y = ui.pos[1], ui.pos[2], ui.pos[3], ui.pos[4], ui.pos[5]
+        local rel = (type(relName) == "string" and _G[relName]) or UIParent
+        TacoRotWindow:SetPoint(p, rel, rp, x, y)
+    else
+        TacoRotWindow:SetPoint("CENTER", UIParent, "CENTER", -90, 0)
+    end
+
+    AnchorSecondaries()
+    EnableDrag(TacoRotWindow, not ui.locked)
+    -- Dragging the small frames too? flip to true:
+    EnableDrag(TacoRotWindow2, false)
+    EnableDrag(TacoRotWindow3, false)
 end
 
--- Queue-style: UI.Update(s1,s2,s3)
-function UI.Update(s1, s2, s3)
-  if not _G.TacoRotWindow then TacoRot:CreateWindows() end
-  if not s2 then s2 = s1 end
-  if not s3 then s3 = s2 end
-  TacoRot:ApplyIcon(_G.TacoRotWindow,  s1)
-  TacoRot:ApplyIcon(_G.TacoRotWindow2, s2)
-  TacoRot:ApplyIcon(_G.TacoRotWindow3, s3)
+-- ================== Public UI API ===================
+function TR:ApplyIcon(frame, spellID)
+    if not frame then return end
+    local tex = SafeSpellTexture(spellID)
+    if frame.icon then
+        frame.icon:SetTexture(tex)
+        frame.spellID = spellID
+    elseif frame.tex then
+        frame.tex:SetTexture(tex)
+        frame.spellID = spellID
+    end
 end
 
--- Cast flash control used by core (optional)
-function TacoRot:SetMainCastFlash(on)
-  if not _G.TacoRotWindow then return end
-  if on then
-    TacoRotWindow._flashing = true
-    TacoRotWindow.border:Show()
-  else
-    TacoRotWindow._flashing = false
-    TacoRotWindow.border:Hide()
-  end
+TR.UI = TR.UI or {}
+function TR.UI:Update(a, b, c)
+    if TacoRotWindow  then TR:ApplyIcon(TacoRotWindow,  a) end
+    if TacoRotWindow2 then TR:ApplyIcon(TacoRotWindow2, b) end
+    if TacoRotWindow3 then TR:ApplyIcon(TacoRotWindow3, c) end
 end
+
+-- ================= Slash Commands ==================
+SLASH_TACOROTUI1 = "/tacorotui"
+SLASH_TACOROTUI2 = "/trui"
+SlashCmdList["TACOROTUI"] = function(msg)
+    msg = (msg or ""):lower()
+    local DB = EnsureDB()
+    if msg == "unlock" then
+        DB.UI.locked = false
+        EnableDrag(TacoRotWindow, true)
+        DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00[TacoRot]|r UI unlocked (drag the MAIN icon).")
+    elseif msg == "lock" then
+        DB.UI.locked = true
+        EnableDrag(TacoRotWindow, false)
+        DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00[TacoRot]|r UI locked.")
+    elseif msg:match("^scale%s+[%d%.]+") then
+        local val = tonumber(msg:match("[%d%.]+"))
+        if val and val >= 0.5 and val <= 2.0 then
+            DB.UI.scale = val
+            TacoRotWindow:SetScale(val)
+            DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00[TacoRot]|r UI scale set to "..val)
+        else
+            DEFAULT_CHAT_FRAME:AddMessage("|cffff5555[TacoRot]|r Scale must be between 0.5 and 2.0")
+        end
+    elseif msg == "reset" then
+        DB.UI.pos = nil
+        DB.UI.scale = 1.0
+        RestoreUI()
+        DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00[TacoRot]|r UI position reset.")
+    else
+        DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00[TacoRot]|r /trui unlock | lock | reset | scale <0.5-2.0>")
+    end
+end
+
+-- ================= Events ==================
+local f = CreateFrame("Frame")
+f:RegisterEvent("PLAYER_LOGIN")
+f:SetScript("OnEvent", function()
+    RestoreUI()
+    DEFAULT_CHAT_FRAME:AddMessage("|cff55ff55[TacoRot]|r UI loaded (movable, safe spellID textures)")
+end)

@@ -1,0 +1,13 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+    <!-- Warlock -->
+    <Script file="warlock_ids.lua"/>
+    <Script file="engine_warlock.lua"/>
+
+    <!-- Rogue -->
+    <Script file="rogue_ids.lua"/>
+    <Script file="engine_rogue.lua"/>
+
+    <!-- Hunter -->
+    <Script file="hunter_ids.lua"/>
+    <Script file="engine_hunter.lua"/>
+</Ui>

@@ -1,22 +1,20 @@
 ## Interface: 30300
 ## Title: TacoRot
-## Notes: ConROC-style rotation helper for 3.3.5 (Epoch). Rogue+Warlock, spec auto-detect, keybind overlays.
+## Notes: ConROC-style rotation helper for 3.3.5 (Epoch). Rogue+Warlock+Hunter, spec auto-detect, keybind overlays.
 ## Author: Steven
-## Version: 1.8-full
+## Version: 1.9
 ## SavedVariables: TacoRotDB
 
 embeds.xml
 Bindings.xml
-
 Compat-335.lua
 core.lua
+ui_safe_override.lua
 ui.lua
 options.lua
 
-# Warlock
-warlock_ids.lua
-engine_warlock.lua
+# Engines & IDs are included via XML to keep order clean
+engines.xml
 
-# Rogue
-rogue_ids.lua
-engine_rogue.lua
+# Keep this dead last so it can sanity-check any engines that didnt attach
+engine_bootstrap.lua
