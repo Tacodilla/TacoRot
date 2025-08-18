@@ -1,130 +1,101 @@
-TacoRot (3.3.5)
+TacoRot – DPS Rotation Helper (Wrath 3.3.5)
 
-TacoRot is a lightweight, ConROC-style rotation helper for WoW 3.3.5 (Epoch).
-It embeds Ace3 and shows a main suggestion icon plus two “next” predictions, with optional detectors (Defense, Interrupt, Purge).
+TacoRot is a lightweight rotation helper built for new players, accessibility, and learning. It shows a 3-icon queue (now + next + later) so you can practice timing without reading guides mid-fight. The pack favors clear visuals, low configuration, and sensible defaults.
 
-Features
+Who this is for
 
-Predictive next-3 queue (stable while you’re mid-cast).
+Players learning a class/spec for the first time
 
-DoT clipping: refresh Immolate/Corruption only when remaining time ≤ cast time × 0.30.
+Anyone who benefits from simple visual prompts instead of dense UIs
 
-Only suggests spells you actually know (rank-aware resolver).
+Leveling characters (the engines include low-level padding so the queue never goes blank while you’re still unlocking spells)
 
-Detectors:
+Game & classes
 
-Defense (Shadow Ward icon when low HP).
+Client: Wrath of the Lich King 3.3.5
 
-Interrupt (Felhunter Spell Lock).
+Focus: DPS only (no healing rotations)
 
-Purge/Devour (Felhunter Devour Magic).
+Classes supported: Hunter, Rogue, Warlock, Druid, Warrior, Paladin, Mage, Priest, Shaman
 
-AoE mode (optional toggle): Seed → Rain of Fire → DoTs → filler.
+Specs: DPS specs only (e.g., Ret, Shadow, Ele/Enh, Arms/Fury, Arcane/Fire/Frost). Tanks/healers are not prioritized.
 
-Draggable UI, anchor persists across reloads.
+Install
 
-Profiles via AceDBOptions.
+Download or clone this repository.
 
-How to use (in game)
+Copy the TacoRot folder into Interface\AddOns\ (keep the folder name).
 
-Open options: /tr
+Launch the game and /reload.
 
-Toggle Unlock to drag the main icon; the others follow it.
+Load order note: each class has an *_ids.lua file and an engine_*.lua file. The IDs file must load before the engine.
 
-Adjust sizes, next-icon scale, and detector toggles.
+Quick start
 
-Move the UI:
+Target a dummy or mob.
 
-/tr → Unlock ON → drag the main icon. Position saves automatically.
+You’ll see three icons: main (left), next, later.
 
-You can bind “TacoRot Unlock” in Key Bindings.
+Cast what the main icon shows. The next two help you prepare GCDs and movement.
 
-AoE mode:
+Use the Options (below) to show/hide spells or change the “padding” window for low levels.
 
-Hold ALT for temporary AoE suggestions, or
+Slash commands
+/tr                -> open TacoRot options
+/tr on             -> enable the engine for your current class
+/tr off            -> disable the engine for your current class
+/tr aoe on         -> hint engines to use AoE priorities (where implemented)
+/tr aoe off        -> return to single-target priorities
 
-/tr aoe to toggle AoE mode on/off (persists).
 
-Profiles: Options → Profiles (copy/set per spec or character).
+If /tr is unavailable in your build, open via Esc → Interface → AddOns → TacoRot.
 
-Rotation logic (Warlock)
+Options menu
 
-Single-target (default):
+Open /tr or go to Interface → AddOns → TacoRot. You’ll see:
 
-Immolate (clip at 30%)
+Class → Spells
 
-Corruption (clip at 30%)
+A toggle list of abilities the engine can propose.
 
-Filler: Shadow Bolt (or Searing Pain if you’ve customized)
+Uncheck a spell to prevent it from appearing in the queue (useful while leveling or if you prefer a variant).
 
-AoE (when enabled): Seed → Rain of Fire → Immolate → Corruption → filler.
+Class → Padding
 
-Prediction: While casting Immolate or Corruption, the addon treats that DoT as “virtually up” so the next two suggestions stay stable (e.g., Immolate → Corruption → Shadow Bolt).
+Enable low-level padding: keeps the queue alive with “soon-ready” abilities and safe fallbacks while you’re leveling.
 
-Commands
+Pad window (seconds): the look-ahead time used by the queue.
 
-/tr – open options.
+Default: 1.60s (about a GCD at low haste).
 
-/tr aoe – toggle AoE mode (ALT is always a momentary AoE override).
+Set to 0.00 for strict “ready now” behavior; increase slightly if you want earlier notice.
 
-(Optional, if you added the patch) /tr debughud – show/hide a small HUD with queue & DoT timers.
+Tip: Padding affects only the suggestion timing, not your actual cooldowns or casting.
 
-Files overview
+Accessibility choices
 
-TacoRot.toc – addon manifest (Interface 30300).
+Three big, readable icons instead of dense text or complicated overlays
 
-embeds.xml – loads Ace3 in the correct order (nested AceConfig-3.0.xml).
+Low-level padding so the UI doesn’t degrade while spells unlock
 
-core.lua – options, profiles, chat commands, lifecycle.
-
-ui.lua – creates the frames (draggable, persisted anchor).
-
-engine_warlock.lua – rotation engine (prediction + DoT clipping + AoE + detectors).
-
-warlock_ids.lua – spell ID tables with rank lists; picks highest known rank.
-
-options.lua – builds the Warlock options panel from resolved spells.
-
-libs\… – embedded Ace3 (LibStub, CallbackHandler, AceAddon, AceEvent, AceConsole, AceTimer, AceHook, AceDB, AceDBOptions, AceGUI, AceConfig).
-
-Customization
-
-Change priorities: edit BuildSingleTarget / BuildAoE in engine_warlock.lua.
-
-Adjust DoT clip: top of engine_warlock.lua, set CLIP (e.g., 0.25 tighter, 0.40 looser).
-
-Add spells/ranks: extend TR_IDS.Rank in warlock_ids.lua. The resolver will pick your highest known rank automatically.
-
-Detectors: tweak the conditions in UpdateDetectors() (e.g., require pet present, combat only, etc).
+Minimal chat output; no sound spam; low CPU footprint
 
 Troubleshooting
 
-Addon loads but options/UI don’t appear
+Three red question marks:
 
-Make sure you extracted to Interface\AddOns\TacoRot\… (not an extra nested folder).
+Usually indicates the class ID table didn’t load before the engine. Ensure *_ids.lua loads before engine_*.lua in the addon's XML.
 
-Use /tr. If nothing opens, check AddOns menu to confirm TacoRot is enabled for your character.
+/reload after enabling a class.
 
-“Cannot find a library instance of AceConfigRegistry-3.0”
+No icons at level 1–20:
 
-Your embeds.xml must include:
-…AceGUI-3.0.xml then AceConfig-3.0\AceConfig-3.0.xml (that XML loads the Registry first).
-Don’t load AceConfig-3.0.lua directly before the Registry.
+Enable Padding and keep the default 1.60s window.
 
-“attempt to call global ‘LibStub’ (a nil value)”
+AoE not changing behavior:
 
-LibStub.lua didn’t load. Confirm embeds.xml has libs\LibStub\LibStub.lua first.
+Some specs have AoE hints implemented; others are single-target only. Toggle with /tr aoe on|off.
 
-Can’t move the icons
+Contributing
 
-/tr → Unlock ON, then drag the main icon. Position persists on drop.
-
-Next-2 boxes seem off while I’m casting
-
-That’s usually GCD/cast timing. The engine treats your current cast as “virtually applied” to keep predictions stable. If you still see flicker, nudge GCD_CUTOFF in engine_warlock.lua to 1.3–1.6.
-
-Credits
-
-Inspired by ConROC’s organization (options and class modules).
-
-Built on Ace3 (embedded).
+Pull requests that improve readability, new-player clarity, or leveling coverage are welcome. Keep changes surgical and consistent with the existing engine/IDs structure (no healing specs).
