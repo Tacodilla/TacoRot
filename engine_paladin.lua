@@ -1,6 +1,5 @@
 -- engine_paladin.lua — TacoRot Paladin (3.3.5)
 -- IDS resolver + padding-safe fallback (A may be nil on first tick) + contract timer.
--- Tweaked for private server: prefer Seal of Righteousness (ID 84508) as first instant-cast seal.
 
 local TR = _G.TacoRot
 if not TR then return end
@@ -9,17 +8,17 @@ if not TR then return end
 local function ResolveIDS()
   local t
   t = _G.TacoRot_IDS_Paladin;       if type(t)=="table" and (t.Ability or t.Rank) then return t end
-  t = _G.TacoRot_IDS_PALADIN;       if type(t)=="table" and (t.Ability or t.Rank) then return t end
+  t = _G.TacoRot_IDS_PALADIN;    if type(t)=="table" and (t.Ability or t.Rank) then return t end
   if type(_G.TacoRot_IDS)=="table" then
-    t = _G.TacoRot_IDS["PALADIN"];  if type(t)=="table" and (t.Ability or t.Rank) then return t end
-    t = _G.TacoRot_IDS["Paladin"];  if type(t)=="table" and (t.Ability or t.Rank) then return t end
+    t = _G.TacoRot_IDS["PALADIN"]; if type(t)=="table" and (t.Ability or t.Rank) then return t end
+    t = _G.TacoRot_IDS["Paladin"];    if type(t)=="table" and (t.Ability or t.Rank) then return t end
     if _G.TacoRot_IDS.Ability then return _G.TacoRot_IDS end
   end
   return nil
 end
 
 local IDS = ResolveIDS() or {}; local A = IDS.Ability -- may be nil at load
-local SAFE = 20271 -- Judgement (safe icon)
+local SAFE = 20271
 
 -- ===== spec name =====
 local function PrimaryTab()
@@ -33,7 +32,8 @@ local function PrimaryTab()
   return bestIdx
 end
 local function SpecName()
-  return "Retribution" -- DPS-only
+  local tab = PrimaryTab()
+  return "Retribution" -- single DPS branch
 end
 
 -- ===== padding config =====
@@ -86,39 +86,28 @@ local function HaveTarget() return UnitExists("target") and not UnitIsDead("targ
 local function pad3(q, fb) q[1]=q[1] or fb; q[2]=q[2] or q[1]; q[3]=q[3] or q[2]; return q end
 local function Push(q,id) if id then q[#q+1]=id end end
 
--- ===== convenience for this server =====
-local SOR = 84508 -- Seal of Righteousness (server custom ID)
-local function HaveSeal()
-  -- Treat any of these as "seal up". Prefer SoR for leveling.
-  return BuffUpID("player", (A and A.SealOfRighteousness) or SOR)
-      or BuffUpID("player", A and A.SealOfVengeance)
-      or BuffUpID("player", A and A.SealOfCorruption)
-end
+-- ===== padding-safe Fallbacks (guard A==nil) =====
 
--- ===== padding-safe Fallback =====
+local function HaveSeal()
+  return A and (BuffUpID("player", A.SealOfVengeance) or BuffUpID("player", A.SealOfCorruption))
+end
 local function Fallback(forceSafe)
   if forceSafe or not A then
-    return SOR or SAFE -- prefer SoR icon for this server
+    return 20271 or SAFE -- Judgement
   end
-  return (Known(A.SealOfRighteousness or SOR) and (A.SealOfRighteousness or SOR))
-      or (Known(A.JudgementOfLight) and A.JudgementOfLight)
+  return (Known(A.JudgementOfLight) and A.JudgementOfLight)
       or (Known(A.JudgementOfWisdom) and A.JudgementOfWisdom)
       or (Known(A.Exorcism) and A.Exorcism)
       or (Known(A.Consecration) and A.Consecration)
-      or SOR or SAFE
+      or 20271 or SAFE
 end
 
--- ===== priorities =====
+
+-- ===== priorities (may reference A; BuildQueue called only when A available) =====
+
 local function BuildQueue()
   local q = {}
-  -- Keep a seal up; prefer SoR (84508) first on this server
-  if not HaveSeal() then
-    if ReadySoon((A and A.SealOfRighteousness) or SOR) then Push(q, (A and A.SealOfRighteousness) or SOR)
-    elseif A and (ReadySoon(A.SealOfVengeance) or ReadySoon(A.SealOfCorruption)) then
-      Push(q, A.SealOfVengeance or A.SealOfCorruption)
-    end
-  end
-
+  if A and not HaveSeal() and (ReadySoon(A.SealOfVengeance) or ReadySoon(A.SealOfCorruption)) then Push(q, A.SealOfVengeance or A.SealOfCorruption) end
   if A and (ReadySoon(A.JudgementOfWisdom) or ReadySoon(A.JudgementOfLight)) then Push(q, A.JudgementOfWisdom or A.JudgementOfLight) end
   if A and ReadySoon(A.DivineStorm) then Push(q, A.DivineStorm) end
   if A and ReadySoon(A.CrusaderStrike) then Push(q, A.CrusaderStrike) end
@@ -128,15 +117,17 @@ local function BuildQueue()
   return q
 end
 
+
 -- ===== TICK =====
 function TR:EngineTick_Paladin()
+  -- Late-bind A every tick; if still nil, show safe fallback w/o touching A
   IDS = ResolveIDS() or IDS
   A = (IDS and IDS.Ability) or A
   if IDS and IDS.UpdateRanks then pcall(IDS.UpdateRanks, IDS) end
 
   local q
   if not A or not next(A) then
-    local fb = Fallback(true)
+    local fb = Fallback(true) -- "true" -> force safe path (no A access)
     q = {fb, fb, fb}
   elseif HaveTarget() then
     q = BuildQueue()
