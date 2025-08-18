@@ -1,4 +1,4 @@
--- Rogue IDs + ranks (subset, 3.3.5-ish)
+-- Rogue IDs + ranks (subset, 3.3.5-ish) with icon fallbacks
 local TR_RG = {}
 TR_RG.Ability = {
   SinisterStrike = 1752,
@@ -43,4 +43,22 @@ function TR_RG:UpdateRanks()
 end
 
 _G.TacoRot_IDS_Rogue = TR_RG
+
+-- ===== Icon fallbacks so Rogue never shows ??? =====
+_G.TacoRotIconFallbacks = _G.TacoRotIconFallbacks or {}
+local fb = _G.TacoRotIconFallbacks
+local function setOnce(id, tex) if id and not fb[id] then fb[id] = tex end end
+
+setOnce(1752,  "Interface\\Icons\\Ability_Rogue_SinisterStrike")
+setOnce(53,    "Interface\\Icons\\Ability_BackStab")
+setOnce(1329,  "Interface\\Icons\\Ability_Rogue_ShadowStrikes")   -- Mutilate
+setOnce(16511, "Interface\\Icons\\Spell_Shadow_LifeDrain")        -- Hemorrhage
+setOnce(8676,  "Interface\\Icons\\Ability_Rogue_Ambush")
+setOnce(703,   "Interface\\Icons\\Ability_Rogue_Garrote")
+setOnce(5171,  "Interface\\Icons\\Ability_Rogue_SliceDice")
+setOnce(1943,  "Interface\\Icons\\Ability_Rogue_Rupture")
+setOnce(2098,  "Interface\\Icons\\Ability_Rogue_Eviscerate")
+setOnce(13877, "Interface\\Icons\\Ability_Warrior_PunishingBlow") -- Blade Flurry
+setOnce(51723, "Interface\\Icons\\Ability_Rogue_FanofKnives")
+
 return TR_RG

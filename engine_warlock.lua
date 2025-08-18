@@ -1,146 +1,160 @@
--- engine_warlock.lua
-local TacoRot = _G.TacoRot
-if not TacoRot then return end
-local IDS = _G.TacoRot_IDS
+-- engine_warlock.lua — TacoRot Warlock (3.3.5)
+-- Standardized engine: single startup line, flash-safe, queue padded to 3.
+-- Early game (lvl < 20): Immolate -> Corruption -> Shadowbolt
 
-local CLIP = 0.30
-local GCD_CUTOFF = 1.6
+-- ==== IDs hookup ====
+local IDS = _G.TacoRot_IDS_Warlock or _G.TacoRot_IDS or {}
+local A   = IDS.Ability or {}
 
-local function Known(id) return id and IsSpellKnown and IsSpellKnown(id) end
-local function ReadySoon(id)
+-- ==== helpers ====
+local function Known(id) return id and IsSpellKnown and IsSpellKnown(id) or false end
+
+local function ReadyNow(id)
   if not Known(id) then return false end
-  local s,d,en = GetSpellCooldown(id)
-  if en == 0 then return false end
-  if not s or s == 0 or d == 0 then return true end
-  if d <= GCD_CUTOFF then return true end
-  return (s + d - GetTime()) <= 0.2
+  local s, d, en = GetSpellCooldown(id)
+  if (en or 0) == 0 then return false end
+  return (s or 0) == 0 or (d or 0) == 0
 end
 
-local function DebuffInfo(unit, spellId)
-  unit = unit or "target"
-  for i=1,40 do
-    local name, _, _, _, _, dur, exp, _, _, _, id = UnitDebuff(unit, i)
+local function DebuffUpID(unit, spellID)
+  if not spellID then return false end
+  for i = 1, 40 do
+    local name, _, _, _, _, _, _, caster, _, _, id = UnitDebuff(unit, i)
     if not name then break end
-    if id == spellId then
-      local remain = (exp and (exp - GetTime())) or 0
-      return true, remain, dur
+    if id == spellID and (not caster or caster == "player") then return true end
+  end
+  return false
+end
+
+local function push(q, id) if id and Known(id) then q[#q+1] = id end end
+local function pad3(q, fb) q[1]=q[1] or fb; q[2]=q[2] or q[1]; q[3]=q[3] or q[2]; return q end
+
+-- ==== spec detection ====
+local function LockSpec()
+  local best, idx = -1, 1
+  for i = 1, GetNumTalentTabs() do
+    local _, _, pts = GetTalentTabInfo(i, "player")
+    if (pts or 0) > best then best, idx = pts, i end
+  end
+  if best <= 0 then return "AFFLICTION" end
+  return (idx==1 and "AFFLICTION") or (idx==2 and "DEMONOLOGY") or "DESTRUCTION"
+end
+
+-- ==== Early-game APL (lvl <20) ====
+local function APL_Early()
+  local q = {}
+  if #q < 3 and Known(A.Immolate)   and not DebuffUpID("target", A.Immolate)   then push(q, A.Immolate) end
+  if #q < 3 and Known(A.Corruption) and not DebuffUpID("target", A.Corruption) then push(q, A.Corruption) end
+  if #q < 3 and Known(A.ShadowBolt) then push(q, A.ShadowBolt) end
+  return pad3(q, (Known(A.ShadowBolt) and A.ShadowBolt) or A.Immolate or A.Corruption)
+end
+
+-- ==== Spec APLs (IDs limited to your warlock_ids.lua) ====
+local function APL_Affliction()
+  if UnitLevel("player") < 20 then return APL_Early() end
+  local q = {}
+  if #q < 3 and Known(A.Corruption) and not DebuffUpID("target", A.Corruption) then push(q, A.Corruption) end
+  -- Optional AoE seed if you use AoE mode (ALT or option)
+  if #q < 3 and Known(A.Seed) and (IsAltKeyDown() or (_G.TacoRot and _G.TacoRot.db and _G.TacoRot.db.profile.aoe)) then push(q, A.Seed) end
+  if #q < 3 and Known(A.ShadowBolt) then push(q, A.ShadowBolt) end
+  return pad3(q, (Known(A.ShadowBolt) and A.ShadowBolt) or A.Corruption)
+end
+
+local function APL_Demonology()
+  if UnitLevel("player") < 20 then return APL_Early() end
+  local q = {}
+  if #q < 3 and Known(A.Immolate)   and not DebuffUpID("target", A.Immolate)   then push(q, A.Immolate) end
+  if #q < 3 and Known(A.Corruption) and not DebuffUpID("target", A.Corruption) then push(q, A.Corruption) end
+  if #q < 3 and Known(A.ShadowBolt) then push(q, A.ShadowBolt) end
+  return pad3(q, (Known(A.ShadowBolt) and A.ShadowBolt) or A.Immolate or A.Corruption)
+end
+
+local function APL_Destruction()
+  if UnitLevel("player") < 20 then return APL_Early() end
+  local q = {}
+  if #q < 3 and Known(A.Immolate)    and not DebuffUpID("target", A.Immolate)  then push(q, A.Immolate) end
+  if #q < 3 and Known(A.Conflagrate) and DebuffUpID("target", A.Immolate) and ReadyNow(A.Conflagrate) then push(q, A.Conflagrate) end
+  if #q < 3 and Known(A.Incinerate)  then push(q, A.Incinerate) end
+  if #q < 3 and Known(A.ShadowBolt)  then push(q, A.ShadowBolt) end
+  return pad3(q, (Known(A.ShadowBolt) and A.ShadowBolt) or A.Incinerate or A.Immolate)
+end
+
+local function BuildQueue()
+  if not UnitExists("target") or UnitIsDead("target") then
+    local fb = (Known(A.ShadowBolt) and A.ShadowBolt) or A.Immolate or A.Corruption
+    return { fb, fb, fb }
+  end
+  local spec = LockSpec()
+  if spec == "DEMONOLOGY" then
+    return APL_Demonology()
+  elseif spec == "DESTRUCTION" then
+    return APL_Destruction()
+  else
+    return APL_Affliction()
+  end
+end
+
+-- ==== attach to core (uniform contract) ====
+local function AttachWarlock()
+  local TR = _G.TacoRot
+  if not TR or TR._warlock_bound then return end
+
+  function TR:EngineTick_Warlock()
+    if IDS and IDS.UpdateRanks then pcall(IDS.UpdateRanks, IDS) end
+    local q = BuildQueue()
+    self._lastMainSpell = q and q[1] or self._lastMainSpell
+    if self.UI and self.UI.Update then
+      self.UI:Update(q[1], q[2], q[3])
     end
   end
-  return false, 0, 0
-end
 
-local function PlayerHP() local m=UnitHealthMax("player") or 1; local c=UnitHealth("player") or m; return c/m end
-local function TargetCasting() return UnitCastingInfo("target") or UnitChannelInfo("target") end
-local function TargetHasBuff() for i=1,40 do if not UnitBuff("target", i) then break end; return true end return false end
-local function IsPlayerCastingName(n) local a=UnitCastingInfo("player") or UnitChannelInfo("player"); return a and n and a==n end
-local function CastTimeSec(id) local _,_,_,ms=GetSpellInfo(id); return (ms or 1500)/1000 end
-local function enabled(db,sid) return sid and (db.profile.spells[sid] ~= false) and Known(sid) end
-local function ShouldRefresh(up, remain, cast) if not up then return true end; return remain <= (cast * CLIP) end
-
-local function BuildQueue(db)
-  if IDS and IDS.UpdateRanks then IDS:UpdateRanks() end
-  local A = IDS.Ability
-  local q, pushed = {}, {}
-  local function push(s) if s and not pushed[s] and Known(s) then q[#q+1]=s; pushed[s]=true end end
-
-  local immUp, immRem = DebuffInfo("target", A.Immolate)
-  local corUp, corRem = DebuffInfo("target", A.Corruption)
-  local immName = GetSpellInfo(A.Immolate)
-  local corName = GetSpellInfo(A.Corruption)
-  if IsPlayerCastingName(immName) then immUp = true; immRem = 999 end
-  if IsPlayerCastingName(corName) then corUp = true; corRem = 999 end
-
-  local immCast = CastTimeSec(A.Immolate)
-  local corCast = CastTimeSec(A.Corruption)
-
-  if enabled(db, A.Immolate) and ReadySoon(A.Immolate) and ShouldRefresh(immUp, immRem, immCast) then
-    push(A.Immolate); immUp = true; immRem = 999
-  end
-  if #q<3 and enabled(db, A.Corruption) and ReadySoon(A.Corruption) and ShouldRefresh(corUp, corRem, corCast) then
-    push(A.Corruption); corUp = true; corRem = 999
+  local function _SpecName()  -- pretty casing for the startup line
+    local s = LockSpec()
+    return (s=="AFFLICTION" and "Affliction") or (s=="DEMONOLOGY" and "Demonology") or "Destruction"
   end
 
-  local fillers = { A.ShadowBolt, A.SearingPain }
-  for _, sid in ipairs(fillers) do
-    if #q >= 3 then break end
-    if enabled(db, sid) and ReadySoon(sid) then q[#q+1]=sid end
-  end
-
-  -- pad to 3
-  while #q < 3 do q[#q+1] = A.ShadowBolt end
-  return q
-end
-
-local PET_SPELL_LOCK = 19647
-local PET_DEVOUR    = 19801
-local function PetIsFelhunter()
-  if not UnitExists("pet") then return false end
-  local fam = UnitCreatureFamily("pet")
-  if fam and fam == "Felhunter" then return true end
-  return IsSpellKnown(PET_SPELL_LOCK)
-end
-
-local function UpdateDetectors(db)
-  if db.profile.enableDefense and PlayerHP() <= (db.profile.defHealth or 0.45) then
-    if IsSpellKnown(IDS.Ability.ShadowWard) then
-      local _,_,icon = GetSpellInfo(IDS.Ability.ShadowWard)
-      if TacoRotDefWindow and icon then TacoRotDefWindow.tex:SetTexture(icon); TacoRotDefWindow:Show() end
+  function TR:StartEngine_Warlock()
+    if self._engineTimerWL then return end
+    if self.EngineTick_Warlock then self:EngineTick_Warlock() end
+    if self.ScheduleRepeatingTimer then
+      self._engineTimerWL = self:ScheduleRepeatingTimer("EngineTick_Warlock", 0.20)
     else
-      if TacoRotDefWindow then TacoRotDefWindow:Show() end
+      local f = CreateFrame("Frame"); f._t = 0
+      f:SetScript("OnUpdate", function(s,e)
+        s._t = s._t + e
+        if s._t >= 0.20 then s._t = 0; if _G.TacoRot and _G.TacoRot.EngineTick_Warlock then _G.TacoRot:EngineTick_Warlock() end end
+      end)
+      self._engineTimerWL = f
     end
-  else
-    if TacoRotDefWindow then TacoRotDefWindow:Hide() end
+    self:Print("TacoRot Warlock engine active: " .. _SpecName())
   end
 
-  if db.profile.enableInterrupt and PetIsFelhunter() and TargetCasting() and IsSpellKnown(PET_SPELL_LOCK) then
-    local _,_,icon = GetSpellInfo(PET_SPELL_LOCK)
-    if TacoRotIntFlash and icon then TacoRotIntFlash.tex:SetTexture(icon); TacoRotIntFlash:Show() end
-  else
-    if TacoRotIntFlash then TacoRotIntFlash:Hide() end
+  function TR:StopEngine_Warlock()
+    if not self._engineTimerWL then return end
+    local t = self._engineTimerWL
+    if type(t)=="table" and t.Cancel then
+      self:CancelTimer(t)
+    elseif type(t)=="table" and t.SetScript then
+      t:SetScript("OnUpdate", nil); t:Hide()
+    end
+    self._engineTimerWL = nil
   end
 
-  if db.profile.enablePurge and PetIsFelhunter() and TargetHasBuff() and IsSpellKnown(PET_DEVOUR) then
-    local _,_,icon = GetSpellInfo(PET_DEVOUR)
-    if TacoRotPurgeFlash and icon then TacoRotPurgeFlash.tex:SetTexture(icon); TacoRotPurgeFlash:Show() end
-  else
-    if TacoRotPurgeFlash then TacoRotPurgeFlash:Hide() end
-  end
-end
-
-function TacoRot:EngineTick_Warlock()
-  local q = BuildQueue(self.db)
-
-  -- store for cast flash
-  self._lastMainSpell = q[1]
-
-  -- optional: hide duplicate next windows
-  if q[2] == q[1] then q[2] = nil end
-  if q[3] == q[1] or q[3] == q[2] then q[3] = nil end
-
-  if TacoRot.ApplyIcon then
-    TacoRot:ApplyIcon(TacoRotWindow,  q[1])
-    TacoRot:ApplyIcon(TacoRotWindow2, q[2])
-    TacoRot:ApplyIcon(TacoRotWindow3, q[3])
-  end
-
-  if TacoRotWindow2 then (q[2] and TacoRotWindow2.Show or TacoRotWindow2.Hide)(TacoRotWindow2) end
-  if TacoRotWindow3 then (q[3] and TacoRotWindow3.Show or TacoRotWindow3.Hide)(TacoRotWindow3) end
-
-  UpdateDetectors(self.db)
-end
-
-function TacoRot:StartEngine_Warlock()
-  if self._engineTimerWL then return end
-  self._engineTimerWL = self:ScheduleRepeatingTimer("EngineTick_Warlock", 0.2)
-end
-function TacoRot:StopEngine_Warlock()
-  if self._engineTimerWL then self:CancelTimer(self._engineTimerWL); self._engineTimerWL=nil end
-end
-
-TacoRot:RegisterMessage("TACOROT_ENABLE_CLASS_MODULE", function()
   local _, class = UnitClass("player")
-  if class == "WARLOCK" then
-    TacoRot:RegisterEvent("SPELLS_CHANGED", function() if IDS and IDS.UpdateRanks then IDS:UpdateRanks() end end)
-    TacoRot:StartEngine_Warlock()
-  end
-end)
+  if class == "WARLOCK" then TR:StartEngine_Warlock() end
+  TR._warlock_bound = true
+end
+
+if _G.TacoRot then
+  AttachWarlock()
+else
+  local f = CreateFrame("Frame")
+  f:RegisterEvent("ADDON_LOADED")
+  f:SetScript("OnEvent", function(_, _, addon)
+    if addon == "TacoRot" then
+      AttachWarlock()
+      f:UnregisterAllEvents()
+      f:Hide()
+    end
+  end)
+end

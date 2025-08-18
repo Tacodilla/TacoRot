@@ -1,148 +1,144 @@
--- engine_rogue.lua (pads to 3; duplicates allowed; updates UI every tick)
+-- engine_rogue.lua — TacoRot Rogue (3.3.5)
+-- Quiet: single startup line; keeps _lastMainSpell in sync for flash.
 
-local TacoRot = _G.TacoRot
-if not TacoRot then return end
 local IDS = _G.TacoRot_IDS_Rogue
-local GCD_CUTOFF = 1.6
+if not IDS then return end
 
+-- ===== helpers =====
 local function Known(id) return id and IsSpellKnown and IsSpellKnown(id) end
-local function ReadySoon(id)
-  if not Known(id) then return false end
-  local s,d,en = GetSpellCooldown(id)
-  if en == 0 then return false end
-  if not s or s == 0 or d == 0 then return true end
-  if d <= GCD_CUTOFF then return true end
-  return (s + d - GetTime()) <= 0.2
-end
-
 local function Energy() return UnitPower("player", 3) or 0 end
-local function ComboPoints() return (GetComboPoints and GetComboPoints("player","target")) or 0 end
-
+local function CP() return (GetComboPoints and GetComboPoints("player","target")) or 0 end
 local function AuraRemain(unit, spellId)
   unit = unit or "player"
   for i=1,40 do
-    local name, _, _, _, _, dur, exp, _, _, _, id = UnitAura(unit, i)
-    if not name then break end
+    local _, _, _, _, _, dur, exp, _, _, _, id = UnitAura(unit, i)
+    if not id then break end
     if id == spellId then return math.max(0,(exp or 0)-GetTime()), dur or 0 end
   end
   return 0,0
 end
-
 local function DebuffRemain(spellId)
   for i=1,40 do
-    local name, _, _, _, _, dur, exp, _, _, _, id = UnitDebuff("target", i)
-    if not name then break end
+    local _, _, _, _, _, dur, exp, _, _, _, id = UnitDebuff("target", i)
+    if not id then break end
     if id == spellId then return math.max(0,(exp or 0)-GetTime()), dur or 0 end
   end
   return 0,0
 end
-
-local function IsAoE() return IsAltKeyDown() or (TacoRot.db and TacoRot.db.profile and TacoRot.db.profile.aoe) end
-local function push(q, sid) if sid and Known(sid) then q[#q+1]=sid end end
-
--- ----- APLs -----
-local function APL_Assassination(A)
-  local q = {}
-  local cp, en = ComboPoints(), Energy()
-  local sndUp, sndDur = AuraRemain("player", A.SliceandDice)
-  local rupUp = (DebuffRemain(A.Rupture) or 0) > 0
-
-  if IsStealthed() and Known(A.Ambush) and en >= 60 then push(q,A.Ambush) end
-  if #q<3 and Known(A.SliceandDice) and (not sndUp or sndDur <= 3) and cp >= 2 then push(q,A.SliceandDice) end
-  if #q<3 and Known(A.Rupture) and (not rupUp) and cp >= 4 then push(q,A.Rupture) end
-  if #q<3 and Known(A.Eviscerate) and cp >= 4 then push(q,A.Eviscerate) end
-  if #q<3 and Known(A.Mutilate) and en >= 40 then push(q,A.Mutilate) end
-  if #q<3 and Known(A.Backstab) and en >= 60 then push(q,A.Backstab) end
-  if #q<3 and Known(A.SinisterStrike) and en >= 45 then push(q,A.SinisterStrike) end
-  if #q==0 then push(q,A.SinisterStrike) end
-  return q
+local function ReadyNow(id)
+  if not Known(id) then return false end
+  local s,d,en = GetSpellCooldown(id)
+  return (en ~= 0) and ((s or 0) == 0 or (d or 0) == 0)
 end
+local function push(q, id) if id and Known(id) then q[#q+1] = id end end
+local function pad3(q, fb) q[1]=q[1] or fb; q[2]=q[2] or q[1]; q[3]=q[3] or q[2]; return q end
 
-local function APL_Combat(A)
-  local q = {}
-  local cp, en = ComboPoints(), Energy()
-  local sndUp, sndDur = AuraRemain("player", A.SliceandDice)
-
-  if Known(A.SliceandDice) and (not sndUp or sndDur <= 3) and cp >= 2 then push(q,A.SliceandDice) end
-  if IsAoE() then
-    if #q<3 and Known(A.BladeFlurry) and ReadySoon(A.BladeFlurry) then push(q,A.BladeFlurry) end
-    if #q<3 and Known(A.FanOfKnives) and en >= 35 then push(q,A.FanOfKnives) end
+-- ===== spec detect =====
+local function RogueSpec()
+  local best, idx = -1, 1
+  for i=1, GetNumTalentTabs() do
+    local _, _, pts = GetTalentTabInfo(i, "player")
+    if (pts or 0) > best then best, idx = pts, i end
   end
-  if #q<3 and Known(A.Eviscerate) and cp >= 4 then push(q,A.Eviscerate) end
-  if #q<3 and Known(A.SinisterStrike) and en >= 45 then push(q,A.SinisterStrike) end
-  if #q<3 and Known(A.Backstab) and en >= 60 then push(q,A.Backstab) end
-  if #q==0 then push(q,A.SinisterStrike) end
-  return q
+  if best <= 0 then return "COMBAT" end
+  return (idx == 1 and "ASSASSINATION") or (idx == 2 and "COMBAT") or "SUBTLETY"
 end
 
-local function APL_Subtlety(A)
+-- ===== APLs =====
+local A = IDS.Ability or {}
+
+local function APL_Assassination()
   local q = {}
-  local cp, en = ComboPoints(), Energy()
-  local sndUp, sndDur = AuraRemain("player", A.SliceandDice)
+  local cp, en = CP(), Energy()
+  local sndUp = AuraRemain("player", A.SliceandDice) > 0
 
-  if IsStealthed() and Known(A.Ambush) and en >= 60 then push(q,A.Ambush) end
-  if #q<3 and Known(A.SliceandDice) and (not sndUp or sndDur <= 3) and cp >= 2 then push(q,A.SliceandDice) end
-  if #q<3 and Known(A.Hemorrhage) and en >= 35 then push(q,A.Hemorrhage) end
-  if #q<3 and Known(A.Eviscerate) and cp >= 4 then push(q,A.Eviscerate) end
-  if #q<3 and Known(A.Backstab) and en >= 60 then push(q,A.Backstab) end
-  if #q==0 then push(q,A.SinisterStrike) end
-  return q
+  if IsStealthed() and Known(A.Ambush) and en >= 60 then push(q, A.Ambush) end
+  if #q<3 and Known(A.SliceandDice) and (not sndUp) and cp >= 2 then push(q, A.SliceandDice) end
+  if #q<3 and Known(A.Envenom) and cp >= 4 then push(q, A.Envenom) end
+  if #q<3 and Known(A.Mutilate) and en >= 55 then push(q, A.Mutilate) end
+  if #q<3 and Known(A.SinisterStrike) and en >= 45 then push(q, A.SinisterStrike) end
+  return pad3(q, (Known(A.SinisterStrike) and A.SinisterStrike) or A.Backstab or A.Mutilate)
 end
 
-local function BuildQueue()
-  if IDS and IDS.UpdateRanks then IDS:UpdateRanks() end
-  local A = IDS and IDS.Ability or {}
-  local spec = TacoRot.GetSpec and TacoRot:GetSpec()
-  local base = (spec == "ASSASSINATION" and APL_Assassination(A))
-           or (spec == "SUBTLETY"      and APL_Subtlety(A))
-           or APL_Combat(A)
+local function APL_Combat()
+  local q = {}
+  local cp, en = CP(), Energy()
+  local sndUp = AuraRemain("player", A.SliceandDice) > 0
 
-  -- pad to 3 (duplicates allowed so next windows always show)
-  while #base < 3 do
-    if IsAoE() and Known(A.FanOfKnives) then
-      push(base, A.FanOfKnives)
-    else
-      local cp = ComboPoints()
-      if cp >= 4 and Known(A.Eviscerate) then
-        push(base, A.Eviscerate)
-      elseif Known(A.Mutilate) then
-        push(base, A.Mutilate)
-      elseif Known(A.Backstab) and IsUsableSpell(A.Backstab) then
-        push(base, A.Backstab)
-      else
-        push(base, A.SinisterStrike)
-      end
+  if #q<3 and Known(A.SliceandDice) and (not sndUp) and cp >= 2 then push(q, A.SliceandDice) end
+  if #q<3 and Known(A.KillingSpree) and ReadyNow(A.KillingSpree) then push(q, A.KillingSpree) end
+  if #q<3 and Known(A.AdrenalineRush) and ReadyNow(A.AdrenalineRush) then push(q, A.AdrenalineRush) end
+  if #q<3 and Known(A.Eviscerate) and cp >= 4 then push(q, A.Eviscerate) end
+  if #q<3 and Known(A.SinisterStrike) and en >= 45 then push(q, A.SinisterStrike) end
+  return pad3(q, (Known(A.SinisterStrike) and A.SinisterStrike) or A.Backstab)
+end
+
+local function APL_Subtlety()
+  local q = {}
+  local cp, en = CP(), Energy()
+  local rupUp = DebuffRemain(A.Rupture) > 0
+
+  if IsStealthed() and Known(A.Ambush) and en >= 60 then push(q, A.Ambush) end
+  if #q<3 and Known(A.Rupture) and (not rupUp) and cp >= 3 then push(q, A.Rupture) end
+  if #q<3 and Known(A.Eviscerate) and cp >= 4 then push(q, A.Eviscerate) end
+  if #q<3 and Known(A.Backstab) and en >= 60 then push(q, A.Backstab) end
+  if #q<3 and Known(A.SinisterStrike) and en >= 45 then push(q, A.SinisterStrike) end
+  return pad3(q, (Known(A.Backstab) and A.Backstab) or A.SinisterStrike)
+end
+
+local function BuildQueue(spec)
+  if not UnitExists("target") or UnitIsDead("target") then
+    local fb = (Known(A.SinisterStrike) and A.SinisterStrike) or A.Backstab or A.Mutilate
+    return {fb, fb, fb}
+  end
+  if spec == "ASSASSINATION" then return APL_Assassination()
+  elseif spec == "SUBTLETY"   then return APL_Subtlety()
+  else return APL_Combat() end
+end
+
+-- ===== attach to core =====
+local function AttachRogue()
+  local TR = _G.TacoRot
+  if not TR or TR._rogue_bound then return end
+
+  function TR:EngineTick_Rogue()
+    local spec = RogueSpec()
+    local q = BuildQueue(spec)
+    self._lastMainSpell = q[1]
+    if self.UI and self.UI.Update then
+      self.UI:Update(q[1], q[2], q[3])
     end
   end
-  return base
-end
 
-function TacoRot:EngineTick_Rogue()
-  local q = BuildQueue()
-  self._lastMainSpell = q[1] -- for core’s cast-flash
-
-  if TacoRot.UI and TacoRot.UI.Update then
-    TacoRot.UI.Update(q[1], q[2], q[3])
-  elseif TacoRot.ApplyIcon then
-    TacoRot:ApplyIcon(TacoRotWindow,  q[1])
-    TacoRot:ApplyIcon(TacoRotWindow2, q[2] or q[1])
-    TacoRot:ApplyIcon(TacoRotWindow3, q[3] or q[2] or q[1])
+  function TR:StartEngine_Rogue()
+    if self._engineTimerRG then return end
+    self:EngineTick_Rogue()
+    if self.ScheduleRepeatingTimer then
+      self._engineTimerRG = self:ScheduleRepeatingTimer("EngineTick_Rogue", 0.2)
+    else
+      local f = CreateFrame("Frame"); f._t=0
+      f:SetScript("OnUpdate", function(s,e) s._t=s._t+e; if s._t>=0.2 then s._t=0; if TR.EngineTick_Rogue then TR:EngineTick_Rogue() end end end)
+      self._engineTimerRG = f
+    end
+    self:Print("TacoRot Rogue engine active: "..RogueSpec())
   end
-end
 
-function TacoRot:StartEngine_Rogue()
-  if self._engineTimerRG then return end
-  self._engineTimerRG = self:ScheduleRepeatingTimer("EngineTick_Rogue", 0.2)
-end
+  function TR:StopEngine_Rogue()
+    if not self._engineTimerRG then return end
+    local t = self._engineTimerRG
+    if type(t)=="table" and t.Cancel then self:CancelTimer(t)
+    elseif type(t)=="table" and t.SetScript then t:SetScript("OnUpdate", nil); t:Hide() end
+    self._engineTimerRG = nil
+  end
 
-function TacoRot:StopEngine_Rogue()
-  if self._engineTimerRG then self:CancelTimer(self._engineTimerRG); self._engineTimerRG=nil end
-end
-
-TacoRot:RegisterMessage("TACOROT_ENABLE_CLASS_MODULE", function()
   local _, class = UnitClass("player")
-  if class == "ROGUE" then
-    if IDS and IDS.UpdateRanks then IDS:UpdateRanks() end
-    TacoRot:StartEngine_Rogue()
-  end
-end)
+  if class == "ROGUE" then TR:StartEngine_Rogue() end
+  TR._rogue_bound = true
+end
+
+if _G.TacoRot then
+  AttachRogue()
+else
+  local f = CreateFrame("Frame"); f:RegisterEvent("ADDON_LOADED")
+  f:SetScript("OnEvent", function(_,_,addon) if addon=="TacoRot" then AttachRogue(); f:UnregisterAllEvents(); f:Hide() end end)
+end

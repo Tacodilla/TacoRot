@@ -10,4 +10,28 @@
     <!-- Hunter -->
     <Script file="hunter_ids.lua"/>
     <Script file="engine_hunter.lua"/>
+    
+    <!-- Druid -->
+    <Script file="druid_ids.lua"/>
+    <Script file="engine_druid.lua"/>
+
+    <!-- Warrior -->
+    <Script file="warrior_ids.lua"/>
+    <Script file="engine_warrior.lua"/>
+
+    <!-- Paladin (Retribution) -->
+    <Script file="paladin_ids.lua"/>
+    <Script file="engine_paladin.lua"/>
+
+    <!-- Mage -->
+    <Script file="mage_ids.lua"/>
+    <Script file="engine_mage.lua"/>
+
+    <!-- Priest (Shadow) -->
+    <Script file="priest_ids.lua"/>
+    <Script file="engine_priest.lua"/>
+
+    <!-- Shaman (Ele/Enh) -->
+    <Script file="shaman_ids.lua"/>
+    <Script file="engine_shaman.lua"/>
 </Ui>

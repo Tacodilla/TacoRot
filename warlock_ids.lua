@@ -1,4 +1,4 @@
--- Warlock IDs + ranks (3.3.5-ish)
+-- Warlock IDs + ranks (3.3.5-ish) with icon fallbacks
 local TR_IDS = {}
 
 TR_IDS.Ability = {
@@ -42,4 +42,21 @@ function TR_IDS:UpdateRanks()
 end
 
 _G.TacoRot_IDS = TR_IDS
+
+-- ===== Icon fallbacks so Warlock never shows ??? =====
+_G.TacoRotIconFallbacks = _G.TacoRotIconFallbacks or {}
+local fb = _G.TacoRotIconFallbacks
+local function setOnce(id, tex) if id and not fb[id] then fb[id] = tex end end
+
+setOnce(686,   "Interface\\Icons\\Spell_Shadow_ShadowBolt")
+setOnce(172,   "Interface\\Icons\\Spell_Shadow_AbominationExplosion") -- Corruption
+setOnce(348,   "Interface\\Icons\\Spell_Fire_Immolation")
+setOnce(5676,  "Interface\\Icons\\Spell_Fire_SoulBurn")               -- Searing Pain
+setOnce(5740,  "Interface\\Icons\\Spell_Shadow_RainOfFire")
+setOnce(1454,  "Interface\\Icons\\Spell_Shadow_BurningSpirit")        -- Life Tap
+setOnce(6229,  "Interface\\Icons\\Spell_Shadow_AntiShadow")           -- Shadow Ward
+setOnce(29722, "Interface\\Icons\\Spell_Fire_FlameShock")             -- Incinerate (approx)
+setOnce(17962, "Interface\\Icons\\Spell_Fire_Fireball02")             -- Conflagrate (approx)
+setOnce(27243, "Interface\\Icons\\Spell_Shadow_SeedOfDestruction")    -- Seed of Corruption
+
 return TR_IDS
