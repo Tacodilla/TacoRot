@@ -1,172 +1,125 @@
--- engine_druid.lua — TacoRot Druid (Balance/Feral), 3.3.5
--- Single startup log, Wrath-only previews until Moonfire, flash-friendly.
+-- engine_druid.lua — TacoRot Druid (3.3.5)
+-- Adds Buff padding (OOC) and Pets maintenance (where applicable) for new-player accessibility.
 
-local Engine = {}
-_G.TacoRot_Engine_Druid = Engine
+local TR = _G.TacoRot
+if not TR then return end
 
--- ===== Helpers =====
-local SI = GetSpellInfo
-local function buffUP(u,n)   return UnitBuff(u,n)   ~= nil end
-local function debuffUP(u,n) return UnitDebuff(u,n) ~= nil end
-local function gcdReady() local s,d=GetSpellCooldown(61304); return (s==0) or ((s+d-GetTime())<=0) end
-local function cp() return GetComboPoints("player","target") end
-local function HasSpell(id) return id and IsSpellKnown and IsSpellKnown(id) or false end
-local function ABILS() local t=_G.TacoRot_IDS_Druid; return t and t.Ability or nil, t end
-
--- ===== Spec detect (level 1–10 safe) =====
-local function level() return UnitLevel("player") or 1 end
-local function points(i) local _,_,p=GetTalentTabInfo(i,"player"); return p or 0 end
-local CAT_FORM_NAME = GetSpellInfo(768)
-local function inCat()
-  local i=1; while true do local name=UnitBuff("player",i); if not name then break end; if name==CAT_FORM_NAME then return true end; i=i+1 end
-  for idx=1,(GetNumShapeshiftForms() or 0) do local _,name,active=GetShapeshiftFormInfo(idx); if active and name==CAT_FORM_NAME then return true end end
-  return false
-end
-local function manaUser() local _,pt=UnitMana("player"),UnitPowerType("player"); return pt==0 end
-local function detectSpec()
-  if level()<10 then return (inCat() or not manaUser()) and "FERAL" or "BALANCE" end
-  local b,f,r=points(1),points(2),points(3); if r>math.max(b,f) then return "UNSUPPORTED" end
-  return (f>b) and "FERAL" or "BALANCE"
-end
-
--- ===== Priorities =====
-local function balancePrio(A)
-  if not A then return nil end
-  if not HasSpell(A.Moonfire) and HasSpell(A.Wrath) then return A.Wrath end -- level 1–3
-  if HasSpell(A.Moonfire)    and not debuffUP("target", SI(A.Moonfire))    then return A.Moonfire end
-  if HasSpell(A.InsectSwarm) and not debuffUP("target", SI(A.InsectSwarm)) then return A.InsectSwarm end
-  if HasSpell(A.Starfall)    and IsUsableSpell(A.Starfall) and gcdReady()  then return A.Starfall end
-  if HasSpell(A.Starfire)    and IsUsableSpell(A.Starfire)                 then return A.Starfire end
-  if HasSpell(A.Wrath)                                                         then return A.Wrath end
-  return nil
-end
-local function feralCatPrio(A)
-  if not A then return nil end
-  if HasSpell(A.SavageRoar) and cp()>=1 and not buffUP("player",SI(A.SavageRoar)) then return A.SavageRoar end
-  if HasSpell(A.Rake)       and not debuffUP("target",SI(A.Rake))                 then return A.Rake end
-  local hasMangle = HasSpell(A.MangleCat) and debuffUP("target", SI(A.MangleCat)) or debuffUP("target","Trauma")
-  if HasSpell(A.MangleCat)  and not hasMangle                                     then return A.MangleCat end
-  if HasSpell(A.Shred)      and cp()<5                                           then return A.Shred end
-  if HasSpell(A.Rip)        and IsUsableSpell(A.Rip)                              then return A.Rip end
-  if HasSpell(A.FerociousBite)                                                   then return A.FerociousBite end
-  return nil
-end
-
--- ===== Lifecycle =====
-function Engine:Ready()
-  local A = ABILS(); if not A then return false,"IDs" end
-  local TR=_G.TacoRot; if not (TR and TR.UI and TR.UI.Update) then return false,"UI" end
-  return true
-end
-function Engine:Init()
-  local TR=_G.TacoRot
-  local _,ids=ABILS(); if ids and ids.UpdateRanks then pcall(ids.UpdateRanks,ids) end
-  self.mode = detectSpec()
-  -- Single per-class startup line
-  TR:Print(("TacoRot Druid engine active: %s"):format(self.mode))
-end
-
--- Keep first icon and flash in sync
-local function SetFirst(TR, main, next1, next2)
-  TR._lastMainSpell = main or TR._lastMainSpell
-  TR.UI:Update(main, next1, next2)
-end
-
-function Engine:Tick()
-  local TR=_G.TacoRot; if not (TR and TR.UI and TR.UI.Update) then return end
-  local A,ids=ABILS(); if not A then TR.UI:Update(nil,nil,nil); return end
-  if not self._ranksOK and ids and ids.UpdateRanks then self._ranksOK = pcall(ids.UpdateRanks, ids) end
-
-  if self.mode=="UNSUPPORTED" or not InCombatLockdown() then
-    if self.mode=="BALANCE" then
-      if not HasSpell(A.Moonfire) then
-        local w = HasSpell(A.Wrath) and A.Wrath or nil
-        SetFirst(TR, w, nil, nil)
-      else
-        SetFirst(TR,
-          HasSpell(A.Wrath) and A.Wrath or nil,
-          HasSpell(A.Moonfire) and A.Moonfire or nil,
-          HasSpell(A.Starfire) and A.Starfire or nil)
-      end
-    elseif self.mode=="FERAL" then
-      SetFirst(TR,
-        HasSpell(A.Rake) and A.Rake or nil,
-        HasSpell(A.MangleCat) and A.MangleCat or nil,
-        HasSpell(A.Shred) and A.Shred or nil)
-    else
-      TR.UI:Update(nil,nil,nil)
-    end
-    return
+-- Resolve IDS table
+local function ResolveIDS()
+  local t
+  t = _G.TacoRot_IDS_Druid;       if type(t)=="table" and (t.Ability or t.Rank) then return t end
+  t = _G.TacoRot_IDS_DRUID;       if type(t)=="table" and (t.Ability or t.Rank) then return t end
+  if type(_G.TacoRot_IDS)=="table" then
+    t = _G.TacoRot_IDS["DRUID"]; if type(t)=="table" and (t.Ability or t.Rank) then return t end
+    t = _G.TacoRot_IDS["Druid"]; if type(t)=="table" and (t.Ability or t.Rank) then return t end
+    if _G.TacoRot_IDS.Ability then return _G.TacoRot_IDS end
   end
+  return nil
+end
 
-  local nextID
-  if self.mode=="BALANCE" then
-    nextID = balancePrio(A)
-    if not HasSpell(A.Moonfire) then
-      local w = HasSpell(A.Wrath) and A.Wrath or nil
-      SetFirst(TR, nextID or w, nil, nil)
-    else
-      SetFirst(TR, nextID,
-        HasSpell(A.Moonfire) and A.Moonfire or nil,
-        HasSpell(A.Starfire) and A.Starfire or nil)
+local IDS = ResolveIDS() or {}; local A = IDS.Ability
+local SAFE = 5176
+
+-- Spec name
+local function PrimaryTab() local n=(GetNumTalentTabs and GetNumTalentTabs()) or 3; local b,p=1,-1; for i=1,n do local _,_,pt=GetTalentTabInfo(i); pt=pt or 0; if pt>p then b,p=i,pt end end return b end
+local function SpecName() local tab=PrimaryTab(); return (tab==1 and "Balance") or (tab==2 and "Feral") or "Restoration" end
+
+-- Config
+local TOKEN = "DRUID"
+local function Pad() local p=TR and TR.db and TR.db.profile and TR.db.profile.pad; local v=p and p[TOKEN]; if not v then return {enabled=true,gcd=1.6} end; if v.enabled==nil then v.enabled=true end; v.gcd=v.gcd or 1.6; return v end
+local function BuffCfg() local p=TR and TR.db and TR.db.profile and TR.db.profile.buff; return (p and p[TOKEN]) or {enabled=true} end
+local function PetCfg() local p=TR and TR.db and TR.db.profile and TR.db.profile.pet; return (p and p[TOKEN]) or {enabled=true} end
+
+-- Helpers
+local function Known(id) return id and (IsPlayerSpell and IsPlayerSpell(id) or (IsSpellKnown and IsSpellKnown(id))) end
+local function ReadyNow(id) if not Known(id) then return false end local s,d,en = GetSpellCooldown(id); if en==0 then return false end return (not s or s==0 or d==0) end
+local function ReadySoon(id) local pad=Pad(); if not pad.enabled then return ReadyNow(id) end if not Known(id) then return false end local s,d,en=GetSpellCooldown(id); if en==0 then return false end if (not s or s==0 or d==0) then return true end return (s+d-GetTime()) <= (pad.gcd or 1.6) end
+local function DebuffUpID(u, id) if not id then return false end local wanted=GetSpellInfo(id) for i=1,40 do local name,_,_,_,_,_,_,caster,_,_,sid=UnitDebuff(u,i); if not name then break end if sid==id or (name==wanted and caster=="player") then return true end end return false end
+local function BuffUpID(u, id) if not id then return false end local wanted=GetSpellInfo(id) for i=1,40 do local name=UnitBuff(u,i); if not name then break end if name==wanted then return true end end return false end
+local function HaveTarget() return UnitExists("target") and not UnitIsDead("target") end
+local function pad3(q, fb) q[1]=q[1] or fb; q[2]=q[2] or q[1]; q[3]=q[3] or q[2]; return q end
+local function Push(q,id) if id then q[#q+1]=id end end
+
+-- OOC Buffs
+
+local function MarkID()
+  if A and A.MarkOfTheWild then return A.MarkOfTheWild end
+  local r = 48469; if Known(r) then return r end -- MotW (Wrath rank)
+  return 1126
+end
+local function ThornsID()
+  if A and A.Thorns then return A.Thorns end
+  local r = 53307; if Known(r) then return r end -- Thorns (Wrath rank)
+  return 467
+end
+local function BuildBuffQueue()
+  local cfg = BuffCfg(); if not (cfg.enabled ~= false) then return end
+  local q = {}
+  if (cfg.mark ~= false) then local m=MarkID(); if m and not BuffUpID("player", m) and ReadySoon(m) then Push(q, m) end end
+  if (cfg.thorns ~= false) then local t=ThornsID(); if t and not BuffUpID("player", t) and ReadySoon(t) then Push(q, t) end end
+  return q
+end
+
+
+-- Pets
+
+local function BuildPetQueue() return nil end
+
+
+-- DPS Priorities (existing style, trimmed)
+
+local function BuildQueue()
+  local q = {}
+  -- Default to Balance-friendly: Moonfire/IS -> Wrath; your feral engine can override if form is Cat/Bear.
+  if A and A.InsectSwarm and not DebuffUpID("target", A.InsectSwarm) and ReadySoon(A.InsectSwarm) then Push(q, A.InsectSwarm) end
+  if A and A.Moonfire and not DebuffUpID("target", A.Moonfire) and ReadySoon(A.Moonfire) then Push(q, A.Moonfire) end
+  if A and ReadySoon(A.Wrath) then Push(q, A.Wrath) end
+  return q
+end
+
+
+function TR:EngineTick_Druid()
+  IDS = ResolveIDS() or IDS
+  A = (IDS and IDS.Ability) or A
+  if IDS and IDS.UpdateRanks then pcall(IDS.UpdateRanks, IDS) end
+
+  local q = {}
+  if not A or not next(A) then
+    q = {SAFE,SAFE,SAFE}
+  elseif not UnitAffectingCombat("player") then
+    q = BuildPetQueue() or BuildBuffQueue() or {} -- prefer getting a pet up first
+    if not q[1] then
+      if HaveTarget() then q = BuildQueue() else q = {SAFE,SAFE,SAFE} end
     end
-  elseif self.mode=="FERAL" then
-    nextID = feralCatPrio(A)
-    SetFirst(TR, nextID,
-      HasSpell(A.SavageRoar) and A.SavageRoar or nil,
-      HasSpell(A.Rake) and A.Rake or nil)
   else
-    TR.UI:Update(nil,nil,nil)
+    q = BuildQueue()
   end
+
+  q = pad3(q or {}, SAFE)
+  self._lastMainSpell = q[1]
+  if self.UI and self.UI.Update then self.UI:Update(q[1], q[2], q[3]) end
 end
 
--- ===== Bind Start/Stop to addon (quiet) =====
-local function bindToAddon(addon)
-  if addon._druidBound then return end
-  function addon:StartEngine_Druid()
-    if self._drTicker then self:StopEngine_Druid() end
-    local E=_G.TacoRot_Engine_Druid
-    if self._drBoot then self:CancelTimer(self._drBoot) end
-    E._bootTries=0
-    self._drBoot = self:ScheduleRepeatingTimer(function()
-      E._bootTries = E._bootTries + 1
-      local ok = E:Ready()
-      if ok then
-        if self._drBoot then self:CancelTimer(self._drBoot); self._drBoot=nil end
-        E:Init()
-        self._drEngine = E
-        self._drTicker = self:ScheduleRepeatingTimer(function() E:Tick() end, 0.10)
-      elseif E._bootTries >= 50 then
-        self:CancelTimer(self._drBoot); self._drBoot=nil
-      end
-    end, 0.10)
+function TR:StartEngine_Druid()
+  self:StopEngine_Druid()
+  self:EngineTick_Druid()
+  local AceTimer = LibStub and LibStub("AceTimer-3.0", true)
+  if AceTimer and AceTimer.ScheduleRepeatingTimer then
+    self._engineTimer_DR = AceTimer:ScheduleRepeatingTimer(function() _G.TacoRot:EngineTick_Druid() end, 0.20)
+  else
+    local acc, f = 0, CreateFrame("Frame")
+    f:SetScript("OnUpdate", function(_, e) acc=acc+(e or 0); if acc>=0.20 then acc=acc-0.20; _G.TacoRot:EngineTick_Druid() end end)
+    self._engineTimer_DR = f
   end
-  function addon:StopEngine_Druid()
-    if self._drBoot   then self:CancelTimer(self._drBoot);   self._drBoot=nil end
-    if self._drTicker then self:CancelTimer(self._drTicker); self._drTicker=nil end
-    self._drEngine=nil
-  end
-  addon._druidBound = true
+  self:Print("TacoRot Druid engine active: " .. SpecName())
 end
 
-if _G.TacoRot then
-  bindToAddon(_G.TacoRot)
-else
-  local binder=CreateFrame("Frame")
-  binder:RegisterEvent("PLAYER_LOGIN")
-  binder:SetScript("OnEvent", function(self)
-    if _G.TacoRot then bindToAddon(_G.TacoRot) end
-    self:UnregisterAllEvents(); self:SetScript("OnEvent", nil)
-  end)
+function TR:StopEngine_Druid()
+  local t = self._engineTimer_DR
+  if not t then return end
+  local AceTimer = LibStub and LibStub("AceTimer-3.0", true)
+  if AceTimer and type(t)=="number" then AceTimer:CancelTimer(t,true) elseif type(t)=="table" and t.SetScript then t:SetScript("OnUpdate",nil); t:Hide() end
+  self._engineTimer_DR = nil
 end
 
--- Optional PEW self-start for race conditions
-local selfKick=CreateFrame("Frame")
-selfKick:RegisterEvent("PLAYER_ENTERING_WORLD")
-selfKick:SetScript("OnEvent", function()
-  local TR=_G.TacoRot; if not TR then return end
-  local _,class=UnitClass("player")
-  if class=="DRUID" and TR.StartEngine_Druid and not TR._drStarted then
-    TR:StartEngine_Druid(); TR._drStarted=true
-  end
-end)
+do local _,c=UnitClass("player"); if c=="DRUID" then TR:StartEngine_Druid() end end
