@@ -11,7 +11,7 @@ TR_RG.Ability = {
   Rupture        = 1943,
   Eviscerate     = 2098,
   BladeFlurry    = 13877,
-  FanOfKnives    = 51723,
+  Envenom        = 32645,
 }
 
 TR_RG.Rank = {
@@ -25,7 +25,7 @@ TR_RG.Rank = {
   Rupture        = {1943,8639,8640,11273,11274,11275,26867},
   Eviscerate     = {2098,6760,6761,6762,8623,8624,11299,11300,26865},
   BladeFlurry    = {13877},
-  FanOfKnives    = {51723},
+  Envenom        = {32645,32684},
 }
 
 local function HighestKnown(list)
@@ -59,6 +59,6 @@ setOnce(5171,  "Interface\\Icons\\Ability_Rogue_SliceDice")
 setOnce(1943,  "Interface\\Icons\\Ability_Rogue_Rupture")
 setOnce(2098,  "Interface\\Icons\\Ability_Rogue_Eviscerate")
 setOnce(13877, "Interface\\Icons\\Ability_Warrior_PunishingBlow") -- Blade Flurry
-setOnce(51723, "Interface\\Icons\\Ability_Rogue_FanofKnives")
+setOnce(32645, "Interface\\Icons\\Ability_Rogue_Disembowel")
 
 return TR_RG

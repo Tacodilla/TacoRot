@@ -94,7 +94,7 @@ local function BuildQueue()
   if tree == 1 then
     -- Elemental - ranged caster
     if A and A.FlameShock and not DebuffUpID("target", A.FlameShock) and ReadySoon(A.FlameShock) then Push(q, A.FlameShock) end
-    if A and ReadySoon(A.LavaBurst) then Push(q, A.LavaBurst) end
+    if A and ReadySoon(A.MoltenBlast) then Push(q, A.MoltenBlast) end
     if A and ReadySoon(A.LightningBolt) then Push(q, A.LightningBolt) end
     if A and ReadySoon(A.ChainLightning) then Push(q, A.ChainLightning) end
   else
@@ -107,8 +107,6 @@ local function BuildQueue()
     if A and ReadySoon(A.Stormstrike) then Push(q, A.Stormstrike) end
     if A and ReadySoon(A.LavaLash) then Push(q, A.LavaLash) end
     if A and ReadySoon(A.EarthShock) then Push(q, A.EarthShock) end
-    local _, _, _, stacks = UnitBuff("player", GetSpellInfo(53817) or "Maelstrom Weapon")
-    if stacks and stacks >= 5 and A and ReadySoon(A.LightningBolt) then Push(q, A.LightningBolt) end
   end
   return q
 end
