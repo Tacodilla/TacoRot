@@ -100,6 +100,10 @@ local function BuildQueue()
       if A and ReadySoon(A.HuntersMark) and not DebuffUpID("target", A.HuntersMark) then Push(q, A.HuntersMark) end
     end
 
+
+=======
+    if A and A.KillShot and ReadySoon(A.KillShot) then Push(q, A.KillShot) end
+
     if InMelee() then
       if A and ReadySoon(A.RaptorStrike) then table.insert(q, 1, A.RaptorStrike) end
       if #q < 3 and A and ReadySoon(A.WingClip) then Push(q, A.WingClip) end
@@ -107,7 +111,10 @@ local function BuildQueue()
       if A and ReadySoon(A.AimedShot)   then Push(q, A.AimedShot) end
       if A and ReadySoon(A.MultiShot)   then Push(q, A.MultiShot) end
       if A and ReadySoon(A.ArcaneShot)  then Push(q, A.ArcaneShot) end
+
       if A and ReadySoon(A.SteadyShot)  then Push(q, A.SteadyShot) end
+=======
+
       if #q < 3 and A and A.SerpentSting and not DebuffUpID("target", A.SerpentSting) and ReadySoon(A.SerpentSting) then
         Push(q, A.SerpentSting)
       end
