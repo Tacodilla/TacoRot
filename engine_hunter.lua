@@ -95,29 +95,25 @@ local function BuildQueue()
 
   local q = {}
 
-  if not HaveTarget() then
-    local pq = BuildPetQueue(); if pq and pq[1] then q = pq else q = { Fallback(), Fallback(), Fallback() } end
-    return q
-  end
-
-  if not UnitAffectingCombat("player") then
-    if A and ReadyNow(A.HuntersMark) and not DebuffUpID("target", A.HuntersMark) then Push(q, A.HuntersMark) end
-  end
-
-  if A and A.KillShot and ReadySoon(A.KillShot) then Push(q, A.KillShot) end
-
-  if InMelee() then
-    if A and ReadyNow(A.RaptorStrike) then table.insert(q, 1, A.RaptorStrike) end
-    if #q < 3 and A and ReadySoon(A.WingClip) then Push(q, A.WingClip) end
-  else
-    if A and ReadySoon(A.AimedShot)   then Push(q, A.AimedShot) end
-    if A and ReadySoon(A.MultiShot)   then Push(q, A.MultiShot) end
-    if A and ReadySoon(A.ArcaneShot)  then Push(q, A.ArcaneShot) end
-    if #q < 3 and A and A.SerpentSting and not DebuffUpID("target", A.SerpentSting) and ReadySoon(A.SerpentSting) then
-      Push(q, A.SerpentSting)
+  if HaveTarget() then
+    if not UnitAffectingCombat("player") then
+      if A and ReadySoon(A.HuntersMark) and not DebuffUpID("target", A.HuntersMark) then Push(q, A.HuntersMark) end
     end
+
+    if InMelee() then
+      if A and ReadySoon(A.RaptorStrike) then table.insert(q, 1, A.RaptorStrike) end
+      if #q < 3 and A and ReadySoon(A.WingClip) then Push(q, A.WingClip) end
+    else
+      if A and ReadySoon(A.AimedShot)   then Push(q, A.AimedShot) end
+      if A and ReadySoon(A.MultiShot)   then Push(q, A.MultiShot) end
+      if A and ReadySoon(A.ArcaneShot)  then Push(q, A.ArcaneShot) end
+      if A and ReadySoon(A.SteadyShot)  then Push(q, A.SteadyShot) end
+      if #q < 3 and A and A.SerpentSting and not DebuffUpID("target", A.SerpentSting) and ReadySoon(A.SerpentSting) then
+        Push(q, A.SerpentSting)
+      end
+    end
+    if #q < 1 and A and A.AutoShot and not AutoShotActive() then Push(q, A.AutoShot) end
   end
-  if #q < 1 and A and A.AutoShot and not AutoShotActive() then Push(q, A.AutoShot) end
 
   if not UnitAffectingCombat("player") and #q == 0 then
     local pq = BuildPetQueue(); if pq and pq[1] then q = pq end

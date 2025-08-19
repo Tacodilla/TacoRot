@@ -75,6 +75,9 @@ local function HaveSeal()
   return BuffUpID("player", (A and A.SealOfRighteousness) or SOR)
       or BuffUpID("player", A and A.SealOfVengeance)
       or BuffUpID("player", A and A.SealOfCorruption)
+      or BuffUpID("player", A and A.SealOfDedication)
+      or BuffUpID("player", A and A.SealOfPenitence)
+      or BuffUpID("player", A and A.SealOfTheMountain)
 end
 local function BuildBuffQueue()
   local cfg = BuffCfg(); if not (cfg.enabled ~= false and (cfg.seal ~= false)) then return end
@@ -97,7 +100,6 @@ local function BuildQueue()
   
   -- standard Ret single-target
   if A and (ReadySoon(A.JudgementOfWisdom) or ReadySoon(A.JudgementOfLight)) then Push(q, A.JudgementOfWisdom or A.JudgementOfLight) end
-  if A and ReadySoon(A.DivineStorm) then Push(q, A.DivineStorm) end
   if A and ReadySoon(A.CrusaderStrike) then Push(q, A.CrusaderStrike) end
   if A and ReadySoon(A.Exorcism) then Push(q, A.Exorcism) end
   if A and ReadySoon(A.Consecration) then Push(q, A.Consecration) end

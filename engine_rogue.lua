@@ -67,10 +67,14 @@ local function BuildPetQueue() return nil end
 
 local function BuildQueue()
   local q = {}
-  -- Simple: Mutilate / Sinister Strike / Eviscerate fallback
+  local tree = PrimaryTab()
   if A and ReadySoon(A.Mutilate) then Push(q, A.Mutilate) end
   if A and ReadySoon(A.SinisterStrike) then Push(q, A.SinisterStrike) end
-  if A and ReadySoon(A.Eviscerate) then Push(q, A.Eviscerate) end
+  if tree == 1 and A and ReadySoon(A.Envenom) then
+    Push(q, A.Envenom)
+  elseif A and ReadySoon(A.Eviscerate) then
+    Push(q, A.Eviscerate)
+  end
   return q
 end
 

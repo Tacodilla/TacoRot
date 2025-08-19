@@ -12,6 +12,7 @@ local IDS = {
     RaptorStrike  = 2973,
     WingClip      = 2974,
     AutoShot      = 75,
+    SteadyShot    = 34120,
   },
   Rank = {
     -- All ranks below are valid in 3.3.5
@@ -24,6 +25,7 @@ local IDS = {
     RaptorStrike  = {2973,14260,14261,14262,14263,14264,14265,14266},
     WingClip      = {2974,14267,14268},
     AutoShot      = {75},
+    SteadyShot    = {34120},
   },
 }
 
@@ -62,3 +64,4 @@ setOnce(2643,  "Interface\\Icons\\INV_Ammo_Arrow_02")
 setOnce(1130,  "Interface\\Icons\\Ability_Hunter_SniperShot")
 setOnce(2974,  "Interface\\Icons\\Ability_Rogue_Trip")
 setOnce(3045,  "Interface\\Icons\\Ability_Hunter_RunningShot")
+setOnce(34120, "Interface\\Icons\\Ability_Hunter_SteadyShot")

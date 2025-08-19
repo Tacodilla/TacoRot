@@ -4,31 +4,35 @@
 
 local IDS = {}
 IDS.Ability = {
-  SealOfVengeance  = 31801,
-  SealOfCorruption = 53736,
-  JudgementOfWisdom = 53408,
-  JudgementOfLight = 20271,
-  CrusaderStrike   = 35395,
-  DivineStorm      = 53385,
-  Consecration     = 26573,
-  Exorcism         = 879,
-  HammerOfWrath    = 24275,
-  AvengingWrath    = 31884,
-  HolyWrath        = 2812,
+  SealOfVengeance    = 31801,
+  SealOfCorruption   = 53736,
+  SealOfDedication   = 20375, -- TODO: verify ID
+  SealOfPenitence    = 31892,
+  SealOfTheMountain  = 84510, -- TODO: verify ID
+  JudgementOfWisdom   = 53408,
+  JudgementOfLight    = 20271,
+  CrusaderStrike     = 35395,
+  Consecration       = 26573,
+  Exorcism           = 879,
+  HammerOfWrath      = 24275,
+  AvengingWrath      = 31884,
+  HolyWrath          = 2812,
 }
 
 IDS.Rank = {
-  SealOfVengeance  = {31801},
-  SealOfCorruption = {53736},
-  JudgementOfWisdom = {53408},
-  JudgementOfLight = {20271},
-  CrusaderStrike   = {35395},
-  DivineStorm      = {53385},
-  Consecration     = {26573, 20116, 20922, 20923, 20924, 27173, 48818, 48819},
-  Exorcism         = {879, 5614, 5615, 10312, 10313, 10314, 27138, 48801, 48800},
-  HammerOfWrath    = {24275, 24274, 24239, 27180, 48805, 48806},
-  AvengingWrath    = {31884},
-  HolyWrath        = {2812, 10318, 27139, 48816, 48817},
+  SealOfVengeance    = {31801},
+  SealOfCorruption   = {53736},
+  SealOfDedication   = {20375}, -- TODO: verify ranks
+  SealOfPenitence    = {31892},
+  SealOfTheMountain  = {84510}, -- TODO: verify ranks
+  JudgementOfWisdom  = {53408},
+  JudgementOfLight   = {20271},
+  CrusaderStrike     = {35395},
+  Consecration       = {26573, 20116, 20922, 20923, 20924, 27173, 48818, 48819},
+  Exorcism           = {879, 5614, 5615, 10312, 10313, 10314, 27138, 48801, 48800},
+  HammerOfWrath      = {24275, 24274, 24239, 27180, 48805, 48806},
+  AvengingWrath      = {31884},
+  HolyWrath          = {2812, 10318, 27139, 48816, 48817},
 }
 
 local function bestRank(list)
@@ -64,9 +68,11 @@ setOnce(53736, "Interface\Icons\Spell_Holy_SealOfVengeance")
 setOnce(53408, "Interface\Icons\Spell_Holy_RighteousFury")
 setOnce(20271, "Interface\Icons\Spell_Holy_RighteousFury")
 setOnce(35395, "Interface\Icons\Spell_Holy_CrusaderStrike")
-setOnce(53385, "Interface\Icons\Ability_Paladin_DivineStorm")
 setOnce(26573, "Interface\Icons\Spell_Holy_InnerFire")
 setOnce(879, "Interface\Icons\Spell_Holy_Excorcism_02")
 setOnce(24275, "Interface\Icons\Ability_Paladin_HammeroftheRighteous")
 setOnce(31884, "Interface\Icons\Spell_Holy_AvengineWrath")
 setOnce(2812, "Interface\Icons\Spell_Holy_Excorcism")
+setOnce(20375, "Interface\\Icons\\Ability_Paladin_SealOfCommand")
+setOnce(31892, "Interface\\Icons\\Ability_Paladin_SealOfBlood")
+setOnce(84510, "Interface\\Icons\\Spell_Holy_SealOfRighteousness")

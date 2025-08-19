@@ -126,14 +126,18 @@ end
 
 local function BuildQueue()
   local q = {}
-
-  if A.Haunt and not DebuffUpID("target", A.Haunt) and ReadySoon(A.Haunt) then Push(q, A.Haunt) end
+  local tree = PrimaryTab()
 
   if A.Corruption and not DebuffUpID("target", A.Corruption) and ReadySoon(A.Corruption) then Push(q, A.Corruption) end
   if A.CurseOfAgony and not DebuffUpID("target", A.CurseOfAgony) and ReadySoon(A.CurseOfAgony) then Push(q, A.CurseOfAgony) end
 
   if A.UnstableAffliction and not DebuffUpID("target", A.UnstableAffliction) and ReadySoon(A.UnstableAffliction) then
     Push(q, A.UnstableAffliction)
+  end
+
+  if tree == 3 then
+    if A.Immolate and not DebuffUpID("target", A.Immolate) and ReadySoon(A.Immolate) then Push(q, A.Immolate) end
+    if A.Conflagrate and DebuffUpID("target", A.Immolate) and ReadySoon(A.Conflagrate) then Push(q, A.Conflagrate) end
   end
 
   if A.ShadowBolt and ReadySoon(A.ShadowBolt) then Push(q, A.ShadowBolt) end

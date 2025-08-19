@@ -18,6 +18,7 @@ TR_IDS.Ability = {
   SummonVoidwalker = 697,
   SummonFelhunter = 691,
   SummonFelguard = 30146,
+  UnstableAffliction = 30108,
   CurseOfAgony = 980,
 }
 
@@ -38,6 +39,7 @@ TR_IDS.Rank = {
   SummonVoidwalker = {697},
   SummonFelhunter = {691},
   SummonFelguard = {30146},
+  UnstableAffliction = {30108,30404},
   CurseOfAgony = {980,1014,6217,11711,11712,11713},
 }
 
@@ -79,6 +81,7 @@ setOnce(688,   "Interface\\Icons\\Spell_Shadow_SummonImp")            -- Summon 
 setOnce(697,   "Interface\\Icons\\Spell_Shadow_SummonVoidWalker")     -- Summon Voidwalker
 setOnce(691,   "Interface\\Icons\\Spell_Shadow_SummonFelHunter")      -- Summon Felhunter
 setOnce(30146, "Interface\\Icons\\Spell_Shadow_SummonFelGuard")       -- Summon Felguard
+setOnce(30108, "Interface\Icons\Spell_Shadow_UnstableAffliction")
 setOnce(980,   "Interface\\Icons\\Spell_Shadow_CurseOfMannoroth")     -- Curse of Agony
 
 return TR_IDS
