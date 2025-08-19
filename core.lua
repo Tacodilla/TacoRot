@@ -216,11 +216,6 @@ function TR:CastStop(_, unit)
   if unit ~= "player" then return end
   
   self.isChanneling = false
-  
-  if self.SetMainCastFlash then 
-    self:SetMainCastFlash(false) 
-  end
-  
   -- Update rotation after cast stops
   self:ScheduleTimer("UpdateRotationDisplay", 0.1)
 end
