@@ -24,7 +24,7 @@ local function SafeSpellTexture(id)
         -- try direct spell texture
         local tex = GetSpellTexture(id)
         if tex then return tex end
-        -- 3.3.5 sometimes doesn’t return a texture for unknown ranks/spells:
+        -- 3.3.5 sometimes doesn't return a texture for unknown ranks/spells:
         local _, _, icon = GetSpellInfo(id)
         if icon then return icon end
     end
@@ -65,6 +65,14 @@ local function CreateIconFrame(name, parent, size, x, y)
     t:SetAllPoints(f)
     t:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
     f.icon = t
+
+    -- Add highlight texture for cast flash effect
+    local highlight = f:CreateTexture(nil, "OVERLAY")
+    highlight:SetAllPoints(f)
+    highlight:SetTexture("Interface\\Buttons\\UI-Common-MouseHilight")
+    highlight:SetBlendMode("ADD")
+    highlight:Hide()
+    f.highlight = highlight
 
     f:Show()
     return f
@@ -115,10 +123,14 @@ end
 TR.UI = TR.UI or {}
 function TR.UI:Update(a,b,c) TR.UI_Update(a,b,c) end
 
--- flash helper the core toggles during cast
+-- flash helper the core toggles during cast - FIXED
 function TR:SetMainCastFlash(on)
-    if not TacoRotWindow or not TacoRotWindow.icon then return end
-    TacoRotWindow.icon:SetDesaturated(on and false or false) -- no-op visual; kept for compatibility
+    if not TacoRotWindow or not TacoRotWindow.highlight then return end
+    if on then
+        TacoRotWindow.highlight:Show()
+    else
+        TacoRotWindow.highlight:Hide()
+    end
 end
 
 SLASH_TACOROTUI1 = "/trui"

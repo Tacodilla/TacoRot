@@ -12,6 +12,13 @@ TR_IDS.Ability = {
   Incinerate = 29722,
   Conflagrate= 17962,
   Seed       = 27243,
+  DemonSkin  = 687,
+  FelArmor   = 28176,
+  SummonImp  = 688,
+  SummonVoidwalker = 697,
+  SummonFelhunter = 691,
+  SummonFelguard = 30146,
+  CurseOfAgony = 980,
 }
 
 TR_IDS.Rank = {
@@ -25,6 +32,13 @@ TR_IDS.Rank = {
   Incinerate = {29722,32231,47837,47838},
   Conflagrate= {17962,18930,18931,18932,27266,30912,47843,47827},
   Seed       = {27243,47833,47836},
+  DemonSkin  = {687,696},
+  FelArmor   = {28176,47893},
+  SummonImp  = {688},
+  SummonVoidwalker = {697},
+  SummonFelhunter = {691},
+  SummonFelguard = {30146},
+  CurseOfAgony = {980,1014,6217,11711,11712,11713},
 }
 
 local function HighestKnown(list)
@@ -58,5 +72,13 @@ setOnce(6229,  "Interface\\Icons\\Spell_Shadow_AntiShadow")           -- Shadow 
 setOnce(29722, "Interface\\Icons\\Spell_Fire_FlameShock")             -- Incinerate (approx)
 setOnce(17962, "Interface\\Icons\\Spell_Fire_Fireball02")             -- Conflagrate (approx)
 setOnce(27243, "Interface\\Icons\\Spell_Shadow_SeedOfDestruction")    -- Seed of Corruption
+setOnce(687,   "Interface\\Icons\\Spell_Shadow_RagingScream")         -- Demon Skin
+setOnce(28176, "Interface\\Icons\\Spell_Shadow_FelArmour")            -- Fel Armor
+setOnce(47893, "Interface\\Icons\\Spell_Shadow_FelArmour")            -- Fel Armor (higher rank)
+setOnce(688,   "Interface\\Icons\\Spell_Shadow_SummonImp")            -- Summon Imp
+setOnce(697,   "Interface\\Icons\\Spell_Shadow_SummonVoidWalker")     -- Summon Voidwalker
+setOnce(691,   "Interface\\Icons\\Spell_Shadow_SummonFelHunter")      -- Summon Felhunter
+setOnce(30146, "Interface\\Icons\\Spell_Shadow_SummonFelGuard")       -- Summon Felguard
+setOnce(980,   "Interface\\Icons\\Spell_Shadow_CurseOfMannoroth")     -- Curse of Agony
 
 return TR_IDS

@@ -35,7 +35,7 @@ local function Known(id) return id and (IsPlayerSpell and IsPlayerSpell(id) or (
 local function ReadyNow(id) if not Known(id) then return false end local s,d,en = GetSpellCooldown(id); if en==0 then return false end return (not s or s==0 or d==0) end
 local function ReadySoon(id) local pad=Pad(); if not pad.enabled then return ReadyNow(id) end if not Known(id) then return false end local s,d,en=GetSpellCooldown(id); if en==0 then return false end if (not s or s==0 or d==0) then return true end return (s+d-GetTime()) <= (pad.gcd or 1.6) end
 local function DebuffUpID(u, id) if not id then return false end local wanted=GetSpellInfo(id) for i=1,40 do local name,_,_,_,_,_,_,caster,_,_,sid=UnitDebuff(u,i); if not name then break end if sid==id or (name==wanted and caster=="player") then return true end end return false end
-local function BuffUpID(u, id) if not id then return false end local wanted=GetSpellInfo(id) for i=1,40 do local name=UnitBuff(u,i); if not name then break end if name==wanted then return true end end return false end
+local function BuffUpID(u, id) if not id then return false end local wanted=GetSpellInfo(id); if not wanted then return false end for i=1,40 do local name,_,_,_,_,_,_,_,_,_,sid=UnitBuff(u,i); if not name then break end if sid==id or name==wanted then return true end end return false end
 local function HaveTarget() return UnitExists("target") and not UnitIsDead("target") end
 local function pad3(q, fb) q[1]=q[1] or fb; q[2]=q[2] or q[1]; q[3]=q[3] or q[2]; return q end
 local function Push(q,id) if id then q[#q+1]=id end end
@@ -47,11 +47,37 @@ local function FelArmorID()
   local r = 47893; if Known(r) then return r end -- Fel Armor
   return nil
 end
+
+local function DemonSkinID()
+  if A and A.DemonSkin then return A.DemonSkin end
+  local r = 687; if Known(r) then return r end -- Demon Skin (rank 1)
+  return nil
+end
+
 local function BuildBuffQueue()
-  local cfg = BuffCfg(); if not (cfg.enabled ~= false and (cfg.felArmor ~= false)) then return end
+  local cfg = BuffCfg(); if not (cfg.enabled ~= false) then return end
   local q = {}
+  
+  -- Check if we have any armor buff at all first
   local fa = FelArmorID()
-  if fa and not BuffUpID("player", fa) and ReadySoon(fa) then Push(q, fa) end
+  local ds = DemonSkinID()
+  local hasArmorBuff = false
+  
+  if fa and BuffUpID("player", fa) then
+    hasArmorBuff = true
+  elseif ds and BuffUpID("player", ds) then
+    hasArmorBuff = true
+  end
+  
+  -- If no armor buff, prioritize: Fel Armor > Demon Skin
+  if not hasArmorBuff then
+    if fa and ReadySoon(fa) and (cfg.felArmor ~= false) then
+      Push(q, fa)
+    elseif ds and ReadySoon(ds) and (cfg.demonSkin ~= false) then
+      Push(q, ds)
+    end
+  end
+  
   return q
 end
 
@@ -61,15 +87,20 @@ end
 local function KnownFirst(...)
   for i=1, select("#", ...) do local id = select(i, ...); if id and Known(id) then return id end end
 end
+
 local function BestDemon()
-  -- Prefer Felguard > Felhunter > Voidwalker > Imp, unless IDs table says otherwise
+  -- For low levels, prioritize Imp if it's the only one available
   local felguard = (A and A.SummonFelguard) or 30146
   local felhunter = (A and A.SummonFelhunter) or 691
   local voidwalker = (A and A.SummonVoidwalker) or 697
   local imp = (A and A.SummonImp) or 688
+  
+  -- Check what we actually know and prefer higher level demons
   return KnownFirst(felguard, felhunter, voidwalker, imp)
 end
+
 local function HasPet() return UnitExists("pet") and not UnitIsDead("pet") end
+
 local function BuildPetQueue()
   local cfg = PetCfg(); if not (cfg.enabled ~= false and (cfg.summon ~= false)) then return end
   local q = {}
@@ -102,9 +133,18 @@ function TR:EngineTick_Warlock()
   if not A or not next(A) then
     q = {SAFE,SAFE,SAFE}
   elseif not UnitAffectingCombat("player") then
-    q = BuildPetQueue() or BuildBuffQueue() or {} -- prefer getting a pet up first
-    if not q[1] then
-      if HaveTarget() then q = BuildQueue() else q = {SAFE,SAFE,SAFE} end
+    -- Out of combat: prioritize pets, then buffs
+    local petQ = BuildPetQueue()
+    local buffQ = BuildBuffQueue()
+    
+    if petQ and petQ[1] then
+      q = petQ
+    elseif buffQ and buffQ[1] then
+      q = buffQ
+    elseif HaveTarget() then
+      q = BuildQueue()
+    else
+      q = {SAFE,SAFE,SAFE}
     end
   else
     q = BuildQueue()
@@ -112,7 +152,13 @@ function TR:EngineTick_Warlock()
 
   q = pad3(q or {}, SAFE)
   self._lastMainSpell = q[1]
-  if self.UI and self.UI.Update then self.UI:Update(q[1], q[2], q[3]) end
+  
+  -- Fix UI update call
+  if TR.UI_Update then
+    TR.UI_Update(q[1], q[2], q[3])
+  elseif self.UI and self.UI.Update then 
+    self.UI:Update(q[1], q[2], q[3]) 
+  end
 end
 
 function TR:StartEngine_Warlock()

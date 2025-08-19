@@ -35,10 +35,21 @@ local function Known(id) return id and (IsPlayerSpell and IsPlayerSpell(id) or (
 local function ReadyNow(id) if not Known(id) then return false end local s,d,en = GetSpellCooldown(id); if en==0 then return false end return (not s or s==0 or d==0) end
 local function ReadySoon(id) local pad=Pad(); if not pad.enabled then return ReadyNow(id) end if not Known(id) then return false end local s,d,en=GetSpellCooldown(id); if en==0 then return false end if (not s or s==0 or d==0) then return true end return (s+d-GetTime()) <= (pad.gcd or 1.6) end
 local function DebuffUpID(u, id) if not id then return false end local wanted=GetSpellInfo(id) for i=1,40 do local name,_,_,_,_,_,_,caster,_,_,sid=UnitDebuff(u,i); if not name then break end if sid==id or (name==wanted and caster=="player") then return true end end return false end
-local function BuffUpID(u, id) if not id then return false end local wanted=GetSpellInfo(id) for i=1,40 do local name=UnitBuff(u,i); if not name then break end if name==wanted then return true end end return false end
+local function BuffUpID(u, id) if not id then return false end local wanted=GetSpellInfo(id); if not wanted then return false end for i=1,40 do local name,_,_,_,_,_,_,_,_,_,sid=UnitBuff(u,i); if not name then break end if sid==id or name==wanted then return true end end return false end
 local function HaveTarget() return UnitExists("target") and not UnitIsDead("target") end
+local function InMelee() return CheckInteractDistance and CheckInteractDistance("target", 3) end
 local function pad3(q, fb) q[1]=q[1] or fb; q[2]=q[2] or q[1]; q[3]=q[3] or q[2]; return q end
 local function Push(q,id) if id then q[#q+1]=id end end
+
+-- Form detection
+local function InCatForm() return GetShapeshiftForm() == 3 end
+local function InBearForm() return GetShapeshiftForm() == 1 end
+local function InMoonkinForm() return GetShapeshiftForm() == 5 end
+
+-- Auto Attack helper
+local function AutoAttackActive()
+  return IsAutoRepeatSpell and (IsAutoRepeatSpell("Attack") == 1 or IsAutoRepeatSpell("Attack") == true)
+end
 
 -- OOC Buffs
 
@@ -60,23 +71,48 @@ local function BuildBuffQueue()
   return q
 end
 
-
 -- Pets
 
 local function BuildPetQueue() return nil end
-
 
 -- DPS Priorities (existing style, trimmed)
 
 local function BuildQueue()
   local q = {}
-  -- Default to Balance-friendly: Moonfire/IS -> Wrath; your feral engine can override if form is Cat/Bear.
-  if A and A.InsectSwarm and not DebuffUpID("target", A.InsectSwarm) and ReadySoon(A.InsectSwarm) then Push(q, A.InsectSwarm) end
-  if A and A.Moonfire and not DebuffUpID("target", A.Moonfire) and ReadySoon(A.Moonfire) then Push(q, A.Moonfire) end
-  if A and ReadySoon(A.Wrath) then Push(q, A.Wrath) end
+  local spec = PrimaryTab()
+  
+  if InCatForm() then
+    -- Cat form - melee DPS
+    if InMelee() and not AutoAttackActive() then
+      table.insert(q, 1, 6603) -- Attack spell ID
+    end
+    if A and ReadySoon(A.MangleCat) then Push(q, A.MangleCat) end
+    if A and ReadySoon(A.Shred) then Push(q, A.Shred) end
+    if A and A.Rake and not DebuffUpID("target", A.Rake) and ReadySoon(A.Rake) then Push(q, A.Rake) end
+    if A and ReadySoon(A.FerociousBite) then Push(q, A.FerociousBite) end
+    
+  elseif InBearForm() then
+    -- Bear form - tank/melee
+    if InMelee() and not AutoAttackActive() then
+      table.insert(q, 1, 6603) -- Attack spell ID
+    end
+    if A and ReadySoon(A.MangleBear) then Push(q, A.MangleBear) end
+    if A and ReadySoon(A.Maul) then Push(q, A.Maul) end
+    
+  else
+    -- Caster form - Balance spells
+    if A and A.InsectSwarm and not DebuffUpID("target", A.InsectSwarm) and ReadySoon(A.InsectSwarm) then Push(q, A.InsectSwarm) end
+    if A and A.Moonfire and not DebuffUpID("target", A.Moonfire) and ReadySoon(A.Moonfire) then Push(q, A.Moonfire) end
+    if A and ReadySoon(A.Wrath) then Push(q, A.Wrath) end
+    
+    -- If no target and low level, suggest cat form for melee
+    if not HaveTarget() and UnitLevel("player") < 10 and A and A.CatForm and ReadySoon(A.CatForm) then
+      Push(q, A.CatForm)
+    end
+  end
+  
   return q
 end
-
 
 function TR:EngineTick_Druid()
   IDS = ResolveIDS() or IDS
@@ -97,7 +133,13 @@ function TR:EngineTick_Druid()
 
   q = pad3(q or {}, SAFE)
   self._lastMainSpell = q[1]
-  if self.UI and self.UI.Update then self.UI:Update(q[1], q[2], q[3]) end
+  
+  -- Fix UI update call
+  if TR.UI_Update then
+    TR.UI_Update(q[1], q[2], q[3])
+  elseif self.UI and self.UI.Update then 
+    self.UI:Update(q[1], q[2], q[3]) 
+  end
 end
 
 function TR:StartEngine_Druid()
