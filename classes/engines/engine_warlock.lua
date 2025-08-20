@@ -23,7 +23,9 @@ local function PetCfg() local p=TR and TR.db and TR.db.profile and TR.db.profile
 
 -- ================= Enhanced Helper Functions =================
 
-local function Known(id) return id and (IsPlayerSpell and IsPlayerSpell(id) or (IsSpellKnown and IsSpellKnown(id))) end
+local function Known(id)
+  return id and IsSpellKnown and IsSpellKnown(id)
+end
 
 -- ORIGINAL ReadyNow/ReadySoon for fallback
 local function ReadyNow(id)
