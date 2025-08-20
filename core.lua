@@ -1,4 +1,4 @@
--- core.lua — Ace3 core for TacoRot (3.3.5) - FIXED
+-- core.lua — Ace3 core for TacoRot (3.3.5) - with GCD spiral updates
 local AceAddon = LibStub and LibStub("AceAddon-3.0")
 if not AceAddon then return end
 
@@ -21,7 +21,6 @@ local defaults = {
     aoe         = false,
     anchor      = {"CENTER", UIParent, "CENTER", -200, 120},
     spells      = {},
-    -- Add missing config sections
     pad         = {},
     buff        = {},
     pet         = {},
@@ -88,15 +87,15 @@ function TR:OnInitialize()
   RegisterOptions(self)
   self:RegisterChatCommand("tacorot", "Slash")
   self:RegisterChatCommand("tr", "Slash")
-  
-  -- Initialize spell cooldown tracking
+
   self.spellCooldowns = {}
-  self.lastCastTime = 0
-  self.isChanneling = false
-  
+  self.lastCastTime   = 0
+  self.isChanneling   = false
+
   if self.UI and self.UI.Init then
     self.UI:Init()
     if self.UI.ApplySettings then self.UI:ApplySettings() end
+    if self.UI.UpdateGCD then self.UI:UpdateGCD() end
   end
 end
 
@@ -113,60 +112,50 @@ function TR:OnEnable()
 end
 
 function TR:OnDisable()
-  -- Fixed: Use proper method names that exist
   local engines = {"Warlock", "Rogue", "Hunter", "Druid", "Mage", "Paladin", "Priest", "Shaman", "Warrior"}
   for _, class in ipairs(engines) do
     local stopMethod = "StopEngine_" .. class
-    if self[stopMethod] then 
-      self[stopMethod](self) 
-    end
+    if self[stopMethod] then self[stopMethod](self) end
   end
-  -- Clear engine flags
   self._engineStates = {}
 end
 
 function TR:HandleWorldEnter()
   local _, class = UnitClass("player")
   if not class then return end
-  
+
   self._engineStates = self._engineStates or {}
-  
+
   local startMethod = "StartEngine_" .. class
   if self[startMethod] and not self._engineStates[class] then
     self[startMethod](self)
     self._engineStates[class] = true
   end
-  
-  if self.SendMessage then 
-    self:SendMessage("TACOROT_ENABLE_CLASS_MODULE") 
-  end
-  
+
+  if self.SendMessage then self:SendMessage("TACOROT_ENABLE_CLASS_MODULE") end
   self:UnregisterEvent("PLAYER_ENTERING_WORLD")
 end
 
--- ================= Spell Tracking (Hekili-like) =================
+-- ================= Tick & Cooldown notifications =================
 function TR:SpellCooldownUpdate()
-  -- Update internal cooldown tracking
+  if self.UI and self.UI.UpdateGCD then self.UI:UpdateGCD() end
   self:ScheduleTimer("UpdateRotationDisplay", 0.1)
 end
 
 function TR:ActionCooldownUpdate()
-  -- Update internal cooldown tracking
+  if self.UI and self.UI.UpdateGCD then self.UI:UpdateGCD() end
   self:ScheduleTimer("UpdateRotationDisplay", 0.1)
 end
 
 function TR:UpdateRotationDisplay()
-  -- Trigger current engine tick if available
   local _, class = UnitClass("player")
   if class then
     local tickMethod = "EngineTick_" .. class
-    if self[tickMethod] then
-      self[tickMethod](self)
-    end
+    if self[tickMethod] then self[tickMethod](self) end
   end
 end
 
--- ================= Cast flash bridge (FIXED) =================
+-- ================= Cast flash bridge =================
 TR._lastMainSpell = TR._lastMainSpell or nil
 
 local function _matchSpell(recID, evtName, evtID)
@@ -178,10 +167,11 @@ end
 
 function TR:CastStart(_, unit, spellName, _, _, spellID)
   if unit ~= "player" then return end
-  
   self.isChanneling = true
   self.lastCastTime = GetTime()
-  
+
+  if self.UI and self.UI.UpdateGCD then self.UI:UpdateGCD() end
+
   local rec = self._lastMainSpell
   if rec and self.SetMainCastFlash and self.db.profile.castFlash and _matchSpell(rec, spellName, spellID) then
     self:SetMainCastFlash(true)
@@ -190,19 +180,14 @@ end
 
 function TR:CastSucceeded(_, unit, spellName, _, _, spellID)
   if unit ~= "player" then return end
-
   self.lastCastTime = GetTime()
+
+  if self.UI and self.UI.UpdateGCD then self.UI:UpdateGCD() end
 
   local rec = self._lastMainSpell
   if rec and self.SetMainCastFlash and self.db.profile.castFlash and _matchSpell(rec, spellName, spellID) then
-    -- Flash already enabled in CastStart; delay turning it off briefly
-    self:ScheduleTimer(function()
-      if self.SetMainCastFlash then self:SetMainCastFlash(false) end
-    end, 0.2)
-
-    if spellID then
-      self.spellCooldowns[spellID] = GetTime()
-    end
+    self:ScheduleTimer(function() if self.SetMainCastFlash then self:SetMainCastFlash(false) end end, 0.2)
+    if spellID then self.spellCooldowns[spellID] = GetTime() end
   end
 
   self:ScheduleTimer("UpdateRotationDisplay", 0.1)
@@ -210,72 +195,43 @@ end
 
 function TR:CastStop(_, unit)
   if unit ~= "player" then return end
-
   self.isChanneling = false
-
-  -- Update rotation after cast stops
-
-  -- Flash handled in CastSucceeded; just refresh rotation
+  if self.UI and self.UI.UpdateGCD then self.UI:UpdateGCD() end
   self:ScheduleTimer("UpdateRotationDisplay", 0.1)
 end
 
--- ================= Helpers used by UI/options (FIXED) =================
+-- ================= Helpers used by UI/options =================
 function TR:UpdateLock()
   local unlocked = self.db.profile.unlock
-  
-  -- Handle both new UI structure and legacy frames
   if self.UI and self.UI.frames then
-    for _, f in pairs(self.UI.frames) do 
-      if f and f.EnableMouse then 
-        f:EnableMouse(unlocked) 
-      end 
+    for _, f in pairs(self.UI.frames) do
+      if f and f.EnableMouse then f:EnableMouse(unlocked) end
     end
   end
-  
-  -- Legacy frame support
   local frames = {TacoRotWindow, TacoRotWindow2, TacoRotWindow3}
   for _, frame in ipairs(frames) do
-    if frame and frame.EnableMouse then
-      frame:EnableMouse(unlocked)
-    end
+    if frame and frame.EnableMouse then frame:EnableMouse(unlocked) end
   end
 end
 
 function TR:UpdateVisibility()
   local showNext = self.db.profile.nextWindows
-  
   if self.UI and self.UI.f2 and self.UI.f3 then
-    if showNext then 
-      self.UI.f2:Show()
-      self.UI.f3:Show() 
-    else 
-      self.UI.f2:Hide()
-      self.UI.f3:Hide() 
-    end
+    if showNext then self.UI.f2:Show(); self.UI.f3:Show() else self.UI.f2:Hide(); self.UI.f3:Hide() end
   end
-  
-  -- Legacy frame support
   if TacoRotWindow2 and TacoRotWindow3 then
-    if showNext then 
-      TacoRotWindow2:Show()
-      TacoRotWindow3:Show() 
-    else 
-      TacoRotWindow2:Hide()
-      TacoRotWindow3:Hide() 
-    end
+    if showNext then TacoRotWindow2:Show(); TacoRotWindow3:Show() else TacoRotWindow2:Hide(); TacoRotWindow3:Hide() end
   end
 end
 
 function TR:Slash(input)
   input = (input or ""):lower()
-  if input == "" then
-    InterfaceOptionsFrame_OpenToCategory("TacoRot")
-    InterfaceOptionsFrame_OpenToCategory("TacoRot")
+  if input == "" or input == "config" then
+    InterfaceOptionsFrame_OpenToCategory("TacoRot"); InterfaceOptionsFrame_OpenToCategory("TacoRot")
     return
   end
   if input == "ul" or input == "unlock" then
-    self.db.profile.unlock = not self.db.profile.unlock
-    self:UpdateLock()
+    self.db.profile.unlock = not self.db.profile.unlock; self:UpdateLock()
     self:Print("UI " .. (self.db.profile.unlock and "unlocked" or "locked"))
     return
   end
@@ -284,12 +240,5 @@ function TR:Slash(input)
     self:Print("AoE mode " .. (self.db.profile.aoe and "enabled" or "disabled"))
     return
   end
-  if input == "config" then
-    InterfaceOptionsFrame_OpenToCategory("TacoRot")
-    InterfaceOptionsFrame_OpenToCategory("TacoRot")
-    return
-  end
-  
-  -- Help text
   self:Print("Commands: /tr config, /tr unlock, /tr aoe")
 end
