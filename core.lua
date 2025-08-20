@@ -212,6 +212,9 @@ function TR:CastStop(_, unit)
   if unit ~= "player" then return end
 
   self.isChanneling = false
+
+  -- Update rotation after cast stops
+
   -- Flash handled in CastSucceeded; just refresh rotation
   self:ScheduleTimer("UpdateRotationDisplay", 0.1)
 end

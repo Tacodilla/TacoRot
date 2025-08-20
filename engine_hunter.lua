@@ -95,13 +95,21 @@ local function BuildQueue()
 
   local q = {}
 
+  if not HaveTarget() then
+    -- No target: favor pet upkeep out of combat, otherwise fall back
+    if not UnitAffectingCombat("player") then
+      local pq = BuildPetQueue(); if pq and pq[1] then return pq end
+    end
+    return { Fallback(), Fallback(), Fallback() }
+  end
   if HaveTarget() then
     if not UnitAffectingCombat("player") then
       if A and ReadySoon(A.HuntersMark) and not DebuffUpID("target", A.HuntersMark) then Push(q, A.HuntersMark) end
     end
 
 
-=======
+
+
     if A and A.KillShot and ReadySoon(A.KillShot) then Push(q, A.KillShot) end
 
     if InMelee() then
@@ -113,7 +121,6 @@ local function BuildQueue()
       if A and ReadySoon(A.ArcaneShot)  then Push(q, A.ArcaneShot) end
 
       if A and ReadySoon(A.SteadyShot)  then Push(q, A.SteadyShot) end
-=======
 
       if #q < 3 and A and A.SerpentSting and not DebuffUpID("target", A.SerpentSting) and ReadySoon(A.SerpentSting) then
         Push(q, A.SerpentSting)
@@ -121,6 +128,14 @@ local function BuildQueue()
     end
     if #q < 1 and A and A.AutoShot and not AutoShotActive() then Push(q, A.AutoShot) end
   end
+
+
+  -- Only after prioritizing Auto Shot / Raptor logic, insert pet suggestions if nothing critical was queued
+  if not UnitAffectingCombat("player") and (#q == 0) then
+    local pq = BuildPetQueue()
+    if pq and pq[1] then
+      q = pq
+    end
 
   if not UnitAffectingCombat("player") and #q == 0 then
     local pq = BuildPetQueue(); if pq and pq[1] then q = pq end
