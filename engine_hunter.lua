@@ -86,9 +86,11 @@ local function BuildQueue()
   local q = {}
 
   if not HaveTarget() then
-    -- No target → prefer pet maintenance; otherwise show a safe icon
-    local pq = BuildPetQueue(); if pq and pq[1] then q = pq else q = { Fallback(), Fallback(), Fallback() } end
-    return q
+    -- No target: favor pet upkeep out of combat, otherwise fall back
+    if not UnitAffectingCombat("player") then
+      local pq = BuildPetQueue(); if pq and pq[1] then return pq end
+    end
+    return { Fallback(), Fallback(), Fallback() }
   end
 
   -- Out-of-combat niceties (keep OG behavior first)
@@ -111,8 +113,11 @@ local function BuildQueue()
   end
 
   -- Only after prioritizing Auto Shot / Raptor logic, insert pet suggestions if nothing critical was queued
-  if not UnitAffectingCombat("player") and #q == 0 then
-    local pq = BuildPetQueue(); if pq and pq[1] then q = pq end
+  if not UnitAffectingCombat("player") and (#q == 0) then
+    local pq = BuildPetQueue()
+    if pq and pq[1] then
+      q = pq
+    end
   end
 
   q = pad3(q or {{}}, Fallback())
