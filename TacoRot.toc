@@ -9,14 +9,12 @@ embeds.xml
 Bindings.xml
 Compat-335.lua
 core.lua
-prediction_engine.lua
-core_prediction_integration.lua
 ui_safe_override.lua
 ui.lua
 options.lua
 
 # Engines & IDs are included via XML to keep order clean
-classes/engines.xml
+engines.xml
 
 # Keep this dead last so it can sanity-check any engines that didnt attach
 engine_bootstrap.lua
