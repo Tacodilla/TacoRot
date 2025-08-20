@@ -1,0 +1,37 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+    <!-- Warlock -->
+    <Script file="Ids/warlock_ids.lua"/>
+    <Script file="engines/engine_warlock.lua"/>
+
+    <!-- Rogue -->
+    <Script file="Ids/rogue_ids.lua"/>
+    <Script file="engines/engine_rogue.lua"/>
+
+    <!-- Hunter -->
+    <Script file="Ids/hunter_ids.lua"/>
+    <Script file="engines/engine_hunter.lua"/>
+    
+    <!-- Druid -->
+    <Script file="Ids/druid_ids.lua"/>
+    <Script file="engines/engine_druid.lua"/>
+
+    <!-- Warrior -->
+    <Script file="Ids/warrior_ids.lua"/>
+    <Script file="engines/engine_warrior.lua"/>
+
+    <!-- Paladin (Retribution) -->
+    <Script file="Ids/paladin_ids.lua"/>
+    <Script file="engines/engine_paladin.lua"/>
+
+    <!-- Mage -->
+    <Script file="Ids/mage_ids.lua"/>
+    <Script file="engines/engine_mage.lua"/>
+
+    <!-- Priest (Shadow) -->
+    <Script file="Ids/priest_ids.lua"/>
+    <Script file="engines/engine_priest.lua"/>
+
+    <!-- Shaman (Ele/Enh) -->
+    <Script file="Ids/shaman_ids.lua"/>
+    <Script file="engines/engine_shaman.lua"/>
+</Ui>
