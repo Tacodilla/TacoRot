@@ -9,7 +9,6 @@ embeds.xml
 Bindings.xml
 Compat-335.lua
 core.lua
-predict.lua
 ui_safe_override.lua
 ui.lua
 options.lua

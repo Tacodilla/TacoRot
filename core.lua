@@ -25,10 +25,6 @@ local defaults = {
     pad         = {},
     buff        = {},
     pet         = {},
-    autoAoE     = false,
-    dotThreshold = 3,
-    debug       = false,
-
   },
 }
 
@@ -67,31 +63,6 @@ local function RegisterOptions(self)
         type="toggle", order=6, name="AoE Mode (ALT = momentary)",
         get=function() return self.db.profile.aoe end,
         set=function(_,v) self.db.profile.aoe=v end,
-      },
-      padgcd = {
-        type="range", order=7, name="ReadySoon pad (s)", min=0, max=5, step=0.1,
-        get=function() local _,c=UnitClass("player"); local p=self.db.profile.pad[c]; return (p and p.gcd) or 1.6 end,
-        set=function(_,v) local _,c=UnitClass("player"); self.db.profile.pad[c]=self.db.profile.pad[c] or {}; self.db.profile.pad[c].gcd=v end,
-      },
-      latency = {
-        type="toggle", order=8, name="Latency compensation",
-        get=function() local _,c=UnitClass("player"); local p=self.db.profile.pad[c]; return not (p and p.latency==false) end,
-        set=function(_,v) local _,c=UnitClass("player"); self.db.profile.pad[c]=self.db.profile.pad[c] or {}; self.db.profile.pad[c].latency=v end,
-      },
-      autoaoe = {
-        type="toggle", order=9, name="Auto AoE detection",
-        get=function() return self.db.profile.autoAoE end,
-        set=function(_,v) self.db.profile.autoAoE=v end,
-      },
-      dotth = {
-        type="range", order=10, name="DoT refresh threshold", min=0, max=10, step=0.5,
-        get=function() return self.db.profile.dotThreshold end,
-        set=function(_,v) self.db.profile.dotThreshold=v end,
-      },
-      debug = {
-        type="toggle", order=11, name="Debug overlay",
-        get=function() return self.db.profile.debug end,
-        set=function(_,v) self.db.profile.debug=v end,
       },
       open = {
         type="execute", order=99, name="Open in Interface Options",
@@ -313,46 +284,12 @@ function TR:Slash(input)
     self:Print("AoE mode " .. (self.db.profile.aoe and "enabled" or "disabled"))
     return
   end
-  if input == "autoaoe" then
-    self.db.profile.autoAoE = not self.db.profile.autoAoE
-    self:Print("Auto AoE " .. (self.db.profile.autoAoE and "enabled" or "disabled"))
-    return
-  end
-  if input:match("^pad") then
-    local v = tonumber(input:match("pad%s+([%d%.]+)"))
-    local _,c = UnitClass("player")
-    self.db.profile.pad[c] = self.db.profile.pad[c] or {}
-    if v then
-      self.db.profile.pad[c].gcd = v
-      self:Print("Pad set to "..v.."s")
-    else
-      self:Print("Pad is "..((self.db.profile.pad[c] and self.db.profile.pad[c].gcd) or 1.6).."s")
-    end
-    return
-  end
-  if input == "latency" then
-    local _,c = UnitClass("player")
-    self.db.profile.pad[c] = self.db.profile.pad[c] or {}
-    local p = self.db.profile.pad[c]
-    p.latency = not (p.latency==false)
-    self:Print("Latency compensation " .. (p.latency and "enabled" or "disabled"))
-    return
-  end
-  if input:match("^dot") then
-    local v = tonumber(input:match("dot%s+([%d%.]+)"))
-    if v then self.db.profile.dotThreshold = v end
-    self:Print("DoT threshold " .. self.db.profile.dotThreshold .. "s")
-    return
-  end
-  if input == "debug" then
-    self.db.profile.debug = not self.db.profile.debug
-    self:Print("Debug overlay " .. (self.db.profile.debug and "enabled" or "disabled"))
-    return
-  end
   if input == "config" then
     InterfaceOptionsFrame_OpenToCategory("TacoRot")
     InterfaceOptionsFrame_OpenToCategory("TacoRot")
     return
   end
-  self:Print("Commands: /tr config, /tr unlock, /tr aoe, /tr autoaoe, /tr pad <sec>, /tr latency, /tr dot <sec>, /tr debug")
+  
+  -- Help text
+  self:Print("Commands: /tr config, /tr unlock, /tr aoe")
 end

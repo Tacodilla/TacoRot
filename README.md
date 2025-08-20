@@ -42,12 +42,10 @@ Use the Options (below) to show/hide spells or change the “padding” window f
 
 Slash commands
 /tr                -> open TacoRot options
-/tr aoe            -> toggle manual AoE mode
-/tr autoaoe        -> toggle automatic AoE detection
-/tr pad <sec>      -> set ReadySoon pad window
-/tr latency        -> toggle latency compensation
-/tr dot <sec>      -> set DoT refresh threshold
-/tr debug          -> toggle debug overlay
+/tr on             -> enable the engine for your current class
+/tr off            -> disable the engine for your current class
+/tr aoe on         -> hint engines to use AoE priorities (where implemented)
+/tr aoe off        -> return to single-target priorities
 
 
 If /tr is unavailable in your build, open via Esc → Interface → AddOns → TacoRot.
