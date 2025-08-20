@@ -1,3 +1,5 @@
+<img width="197" height="84" alt="image" src="https://github.com/user-attachments/assets/407c86b2-439e-49d2-839f-cd485d1fe56a" />
+
 TacoRot – DPS Rotation Helper (Wrath 3.3.5)
 
 TacoRot is a lightweight rotation helper built for new players, accessibility, and learning. It shows a 3-icon queue (now + next + later) so you can practice timing without reading guides mid-fight. The pack favors clear visuals, low configuration, and sensible defaults.
