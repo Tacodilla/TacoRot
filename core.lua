@@ -249,6 +249,12 @@ function TR:UpdateLock()
   end
 end
 
+function TR:ToggleUnlock()
+  self.db.profile.unlock = not self.db.profile.unlock
+  self:UpdateLock()
+  self:Print("UI " .. (self.db.profile.unlock and "unlocked" or "locked"))
+end
+
 function TR:UpdateVisibility()
   local showNext = self.db.profile.nextWindows
   
