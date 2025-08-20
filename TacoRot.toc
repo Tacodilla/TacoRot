@@ -14,7 +14,7 @@ ui.lua
 options.lua
 
 # Engines & IDs are included via XML to keep order clean
-engines.xml
+classes/engines.xml
 
 # Keep this dead last so it can sanity-check any engines that didnt attach
 engine_bootstrap.lua
