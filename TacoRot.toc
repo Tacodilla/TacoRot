@@ -1,6 +1,6 @@
 ## Interface: 30300
 ## Title: TacoRot
-## Notes: ConROC-style rotation helper for 3.3.5 (Epoch). Rogue+Warlock+Hunter, spec auto-detect, keybind overlays.
+## Notes: Rotation helper for 3.3.5 (Epoch). Rogue+Warlock+Hunter, spec auto-detect, keybind overlays.
 ## Author: Steven
 ## Version: 1.9
 ## SavedVariables: TacoRotDB
