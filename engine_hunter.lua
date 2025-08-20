@@ -29,7 +29,17 @@ local function PetCfg() local p=TR and TR.db and TR.db.profile and TR.db.profile
 -- ===== helpers =====
 local function Known(id) return id and (IsPlayerSpell and IsPlayerSpell(id) or (IsSpellKnown and IsSpellKnown(id))) end
 local function ReadyNow(id) if not Known(id) then return false end local s,d,en=GetSpellCooldown(id); if en==0 then return false end return (not s or s==0 or d==0) end
-local function ReadySoon(id) local pad=Pad(); if not pad.enabled then return ReadyNow(id) end if not Known(id) then return false end local s,d,en=GetSpellCooldown(id); if en==0 then return false end if (not s or s==0 or d==0) then return true end return (s+d-GetTime()) <= (pad.gcd or 1.6) end
+local function ReadySoon(id)
+  local pad = Pad()
+  if not pad.enabled then return ReadyNow(id) end
+  if not Known(id) then return false end
+  local start, duration, enabled = GetSpellCooldown(id)
+  if enabled == 0 then return false end
+  if (not start or start == 0 or duration == 0) then return true end
+  local gcd = 1.5
+  local remaining = (start + duration) - GetTime()
+  return remaining <= (pad.gcd + gcd)
+end
 local function DebuffUpID(u, id) if not id then return false end local wanted=GetSpellInfo(id) for i=1,40 do local name,_,_,_,_,_,_,caster,_,_,sid=UnitDebuff(u,i); if not name then break end if sid==id or (name==wanted and caster=="player") then return true end end return false end
 local function BuffUpID(u, id) if not id then return false end local wanted=GetSpellInfo(id) for i=1,40 do local name=UnitBuff(u,i); if not name then break end if name==wanted then return true end end return false end
 local function HaveTarget() return UnitExists("target") and not UnitIsDead("target") end
@@ -92,25 +102,33 @@ local function BuildQueue()
     end
     return { Fallback(), Fallback(), Fallback() }
   end
-
-  -- Out-of-combat niceties (keep OG behavior first)
-  if not UnitAffectingCombat("player") then
-    if A and ReadyNow(A.HuntersMark) and not DebuffUpID("target", A.HuntersMark) then Push(q, A.HuntersMark) end
-    if InRanged() and not AutoShotActive() and A and A.AutoShot then table.insert(q, 1, A.AutoShot) end
-  end
-
-  if InMelee() then
-    if A and ReadyNow(A.RaptorStrike) then table.insert(q, 1, A.RaptorStrike) end
-    if #q < 3 and A and ReadySoon(A.WingClip) then Push(q, A.WingClip) end
-  else
-    if A and ReadySoon(A.AimedShot)   then Push(q, A.AimedShot) end
-    if A and ReadySoon(A.MultiShot)   then Push(q, A.MultiShot) end
-    if A and ReadySoon(A.ArcaneShot)  then Push(q, A.ArcaneShot) end
-    if #q < 3 and A and A.SerpentSting and not DebuffUpID("target", A.SerpentSting) and ReadySoon(A.SerpentSting) then
-      Push(q, A.SerpentSting)
+  if HaveTarget() then
+    if not UnitAffectingCombat("player") then
+      if A and ReadySoon(A.HuntersMark) and not DebuffUpID("target", A.HuntersMark) then Push(q, A.HuntersMark) end
     end
-    if #q < 1 and A and A.AutoShot then Push(q, A.AutoShot) end
+
+
+
+
+    if A and A.KillShot and ReadySoon(A.KillShot) then Push(q, A.KillShot) end
+
+    if InMelee() then
+      if A and ReadySoon(A.RaptorStrike) then table.insert(q, 1, A.RaptorStrike) end
+      if #q < 3 and A and ReadySoon(A.WingClip) then Push(q, A.WingClip) end
+    else
+      if A and ReadySoon(A.AimedShot)   then Push(q, A.AimedShot) end
+      if A and ReadySoon(A.MultiShot)   then Push(q, A.MultiShot) end
+      if A and ReadySoon(A.ArcaneShot)  then Push(q, A.ArcaneShot) end
+
+      if A and ReadySoon(A.SteadyShot)  then Push(q, A.SteadyShot) end
+
+      if #q < 3 and A and A.SerpentSting and not DebuffUpID("target", A.SerpentSting) and ReadySoon(A.SerpentSting) then
+        Push(q, A.SerpentSting)
+      end
+    end
+    if #q < 1 and A and A.AutoShot and not AutoShotActive() then Push(q, A.AutoShot) end
   end
+
 
   -- Only after prioritizing Auto Shot / Raptor logic, insert pet suggestions if nothing critical was queued
   if not UnitAffectingCombat("player") and (#q == 0) then
@@ -118,10 +136,12 @@ local function BuildQueue()
     if pq and pq[1] then
       q = pq
     end
+
+  if not UnitAffectingCombat("player") and #q == 0 then
+    local pq = BuildPetQueue(); if pq and pq[1] then q = pq end
   end
 
-  q = pad3(q or {{}}, Fallback())
-  return q
+  return pad3(q, Fallback())
 end
 
 -- ===== Engine tick / timer =====

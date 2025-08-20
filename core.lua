@@ -190,33 +190,32 @@ end
 
 function TR:CastSucceeded(_, unit, spellName, _, _, spellID)
   if unit ~= "player" then return end
-  
+
   self.lastCastTime = GetTime()
-  
+
   local rec = self._lastMainSpell
   if rec and self.SetMainCastFlash and self.db.profile.castFlash and _matchSpell(rec, spellName, spellID) then
-    self:SetMainCastFlash(true)
-    self:ScheduleTimer(function() 
-      if self.SetMainCastFlash then 
-        self:SetMainCastFlash(false) 
-      end 
-    end, 0.5) -- Longer flash duration like Hekili
-    
-    -- Update cooldown tracking
+    -- Flash already enabled in CastStart; delay turning it off briefly
+    self:ScheduleTimer(function()
+      if self.SetMainCastFlash then self:SetMainCastFlash(false) end
+    end, 0.2)
+
     if spellID then
       self.spellCooldowns[spellID] = GetTime()
     end
   end
-  
-  -- Trigger immediate rotation update after spell cast
-  self:ScheduleTimer("UpdateRotationDisplay", 0.2)
+
+  self:ScheduleTimer("UpdateRotationDisplay", 0.1)
 end
 
 function TR:CastStop(_, unit)
   if unit ~= "player" then return end
-  
+
   self.isChanneling = false
+
   -- Update rotation after cast stops
+
+  -- Flash handled in CastSucceeded; just refresh rotation
   self:ScheduleTimer("UpdateRotationDisplay", 0.1)
 end
 

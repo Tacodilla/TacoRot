@@ -23,7 +23,23 @@ local function Pad() local p=TR and TR.db and TR.db.profile and TR.db.profile.pa
 local function BuffCfg() local p=TR and TR.db and TR.db.profile and TR.db.profile.buff; return (p and p[TOKEN]) or {enabled=true} end
 
 local function Known(id) return id and (IsPlayerSpell and IsPlayerSpell(id) or (IsSpellKnown and IsSpellKnown(id))) end
-local function ReadySoon(id) local pad=Pad(); if not pad.enabled then local s,d,en=GetSpellCooldown(id); if not Known(id) or en==0 then return false end return (not s or s==0 or d==0) end if not Known(id) then return false end local s,d,en=GetSpellCooldown(id); if en==0 then return false end if (not s or s==0 or d==0) then return true end return (s+d-GetTime()) <= (pad.gcd or 1.6) end
+local function ReadyNow(id)
+  if not Known(id) then return false end
+  local s,d,en = GetSpellCooldown(id)
+  if en == 0 then return false end
+  return (not s or s==0 or d==0)
+end
+local function ReadySoon(id)
+  local pad = Pad()
+  if not pad.enabled then return ReadyNow(id) end
+  if not Known(id) then return false end
+  local start, duration, enabled = GetSpellCooldown(id)
+  if enabled == 0 then return false end
+  if (not start or start == 0 or duration == 0) then return true end
+  local gcd = 1.5
+  local remaining = (start + duration) - GetTime()
+  return remaining <= (pad.gcd + gcd)
+end
 local function BuffUpID(u, id) if not id then return false end local wanted=GetSpellInfo(id) for i=1,40 do local name=UnitBuff(u,i); if not name then break end if name==wanted then return true end end return false end
 local function DebuffUpID(u, id) if not id then return false end local wanted=GetSpellInfo(id) for i=1,40 do local name,_,_,_,_,_,_,caster,_,_,sid=UnitDebuff(u,i); if not name then break end if sid==id or (name==wanted and caster=="player") then return true end end return false end
 local function Push(q,id) if id then q[#q+1]=id end end

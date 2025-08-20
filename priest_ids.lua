@@ -11,7 +11,6 @@ IDS.Ability = {
   MindFlay         = 15407,
   ShadowWordDeath  = 32379,
   Shadowfiend      = 34433,
-  Dispersion       = 47585,
 }
 
 IDS.Rank = {
@@ -22,7 +21,6 @@ IDS.Rank = {
   MindFlay         = {15407, 17311, 17312, 17313, 17314, 18807, 25387, 48155, 48156},
   ShadowWordDeath  = {32379, 32996, 48157, 48158},
   Shadowfiend      = {34433},
-  Dispersion       = {47585},
 }
 
 local function bestRank(list)
@@ -60,4 +58,3 @@ setOnce(8092, "Interface\Icons\Spell_Shadow_UnholyFrenzy")
 setOnce(15407, "Interface\Icons\Spell_Shadow_SiphonMana")
 setOnce(32379, "Interface\Icons\Spell_Shadow_DemonicFortitude")
 setOnce(34433, "Interface\Icons\Spell_Shadow_Shadowfiend")
-setOnce(47585, "Interface\Icons\Spell_Shadow_Dispersion")
