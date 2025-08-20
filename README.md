@@ -1,99 +1,101 @@
-# TacoRot - DPS Rotation Helper
+TacoRot – DPS Rotation Helper (Wrath 3.3.5)
 
-A lightweight rotation helper addon for World of Warcraft 3.3.5a (Wrath of the Lich King). Shows a simple 3-icon queue to help you learn and execute optimal DPS rotations.
+TacoRot is a lightweight rotation helper built for new players, accessibility, and learning. It shows a 3-icon queue (now + next + later) so you can practice timing without reading guides mid-fight. The pack favors clear visuals, low configuration, and sensible defaults.
 
-## ✨ Features
+Who this is for
 
-- **Simple 3-Icon Display**: Shows current + next 2 spells in your rotation
-- **Multi-Class Support**: Works with all DPS specs across 9 classes
-- **Smart Recommendations**: Adapts to your level, spec, and combat situation
-- **Drag & Drop Interface**: Movable, scalable, and customizable
-- **Low-Level Friendly**: Includes "padding" so the queue never goes empty while leveling
-- **Zero Configuration**: Works out of the box with sensible defaults
+Players learning a class/spec for the first time
 
-## 🎮 Supported Classes
+Anyone who benefits from simple visual prompts instead of dense UIs
 
-| Class | Specs | Notes |
-|-------|-------|-------|
-| **Hunter** | Beast Mastery, Marksmanship, Survival | Pet management included |
-| **Rogue** | Assassination, Combat, Subtlety | Combo point aware |
-| **Warlock** | Affliction, Demonology, Destruction | Pet summoning, DoT tracking |
-| **Druid** | Balance, Feral (Cat) | Form-specific rotations |
-| **Warrior** | Arms, Fury | Rage management |
-| **Paladin** | Retribution | Seal/Judgement tracking |
-| **Mage** | Arcane, Fire, Frost | Proc-aware suggestions |
-| **Priest** | Shadow | DoT priority system |
-| **Shaman** | Elemental, Enhancement | Melee/caster hybrid support |
+Leveling characters (the engines include low-level padding so the queue never goes blank while you’re still unlocking spells)
 
-## 📦 Installation
+Game & classes
 
-1. Download the latest release
-2. Extract to `World of Warcraft/Interface/AddOns/`
-3. Ensure the folder is named `TacoRot`
-4. Restart WoW or `/reload`
+Client: Wrath of the Lich King 3.3.5
 
-## 🚀 Quick Start
+Focus: DPS only (no healing rotations)
 
-1. Target a training dummy or enemy
-2. Three icons will appear showing your rotation
-3. Cast the **left icon** (main suggestion)
-4. The **middle** and **right** icons help you prepare for what's next
+Classes supported: Hunter, Rogue, Warlock, Druid, Warrior, Paladin, Mage, Priest, Shaman
 
-That's it! The addon automatically detects your class and spec.
+Specs: DPS specs only (e.g., Ret, Shadow, Ele/Enh, Arms/Fury, Arcane/Fire/Frost). Tanks/healers are not prioritized.
 
-## ⚙️ Commands
+Install
 
-| Command | Description |
-|---------|-------------|
-| `/tr` | Open configuration menu |
-| `/tr unlock` | Unlock UI for repositioning |
-| `/tr lock` | Lock UI in place |
-| `/trui scale 1.2` | Change UI scale |
-| `/trui reset` | Reset UI position |
+Download or clone this repository.
 
-## 🎯 Who This Is For
+Copy the TacoRot folder into Interface\AddOns\ (keep the folder name).
 
-- **New Players** learning their class rotation
-- **Leveling Characters** who want guidance as spells unlock
-- **Players Returning** to WoW who need rotation refreshers
-- **Anyone** who prefers visual cues over memorizing complex rotations
+Launch the game and /reload.
 
-## 🔧 Configuration
+Load order note: each class has an *_ids.lua file and an engine_*.lua file. The IDs file must load before the engine.
 
-Access the full configuration menu with `/tr` or through:
-**ESC → Interface → AddOns → TacoRot**
+Quick start
 
-### Key Options:
-- **Spell Toggles**: Enable/disable specific abilities
-- **Padding Settings**: Adjust the "look-ahead" window for smoother rotations
-- **Buff Management**: Configure out-of-combat buff suggestions
-- **Pet Options**: Control pet summoning and maintenance (Hunter/Warlock)
+Target a dummy or mob.
 
-## 🛠️ Technical Details
+You’ll see three icons: main (left), next, later.
 
-- **Client**: WoW 3.3.5a (Wrath of the Lich King)
-- **Framework**: Ace3
-- **Performance**: Lightweight with minimal CPU usage
-- **Compatibility**: Works with most other addons
+Cast what the main icon shows. The next two help you prepare GCDs and movement.
 
-## 🤝 Contributing
+Use the Options (below) to show/hide spells or change the “padding” window for low levels.
 
-Contributions welcome! Please:
-- Keep changes focused on rotation accuracy and new-player friendliness
-- Test with multiple classes/specs
-- Follow the existing code style
+Slash commands
+/tr                -> open TacoRot options
+/tr on             -> enable the engine for your current class
+/tr off            -> disable the engine for your current class
+/tr aoe on         -> hint engines to use AoE priorities (where implemented)
+/tr aoe off        -> return to single-target priorities
 
-## 📄 License
 
-MIT License - feel free to modify and redistribute.
+If /tr is unavailable in your build, open via Esc → Interface → AddOns → TacoRot.
 
-## 💡 Tips
+Options menu
 
-- **Enable Padding** while leveling to keep suggestions flowing
-- **Unlock the UI** to reposition icons where they're comfortable
-- **Check class-specific options** for buff and pet management settings
-- **Use training dummies** to practice rotations without pressure
+Open /tr or go to Interface → AddOns → TacoRot. You’ll see:
 
----
+Class → Spells
 
-*Built for the 3.3.5a community with ❤️*
+A toggle list of abilities the engine can propose.
+
+Uncheck a spell to prevent it from appearing in the queue (useful while leveling or if you prefer a variant).
+
+Class → Padding
+
+Enable low-level padding: keeps the queue alive with “soon-ready” abilities and safe fallbacks while you’re leveling.
+
+Pad window (seconds): the look-ahead time used by the queue.
+
+Default: 1.60s (about a GCD at low haste).
+
+Set to 0.00 for strict “ready now” behavior; increase slightly if you want earlier notice.
+
+Tip: Padding affects only the suggestion timing, not your actual cooldowns or casting.
+
+Accessibility choices
+
+Three big, readable icons instead of dense text or complicated overlays
+
+Low-level padding so the UI doesn’t degrade while spells unlock
+
+Minimal chat output; no sound spam; low CPU footprint
+
+Troubleshooting
+
+Three red question marks:
+
+Usually indicates the class ID table didn’t load before the engine. Ensure *_ids.lua loads before engine_*.lua in the addon's XML.
+
+/reload after enabling a class.
+
+No icons at level 1–20:
+
+Enable Padding and keep the default 1.60s window.
+
+AoE not changing behavior:
+
+Some specs have AoE hints implemented; others are single-target only. Toggle with /tr aoe on|off.
+
+Contributing
+
+Pull requests that improve readability, new-player clarity, or leveling coverage are welcome. Keep changes surgical and consistent with the existing engine/IDs structure (no healing specs).
