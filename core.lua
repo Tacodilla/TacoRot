@@ -83,13 +83,6 @@ local function RegisterOptions(self)
 end
 
 -- ================= Lifecycle =================
-local function DisablePredictionForCompatibility()
-  if TR.db and TR.db.profile and TR.db.profile.prediction then
-    TR.db.profile.prediction.enabled = false
-    TR:Print("Prediction system disabled for 3.3.5a compatibility")
-  end
-end
-
 function TR:OnInitialize()
   self.db = AceDB:New("TacoRotDB", defaults, true)
   RegisterOptions(self)
@@ -108,7 +101,6 @@ function TR:OnInitialize()
 end
 
 function TR:OnEnable()
-  DisablePredictionForCompatibility()
   self:RegisterEvent("PLAYER_ENTERING_WORLD", "HandleWorldEnter")
   self:RegisterEvent("UNIT_SPELLCAST_START",         "CastStart")
   self:RegisterEvent("UNIT_SPELLCAST_CHANNEL_START", "CastStart")
@@ -247,12 +239,6 @@ function TR:UpdateLock()
       frame:EnableMouse(unlocked)
     end
   end
-end
-
-function TR:ToggleUnlock()
-  self.db.profile.unlock = not self.db.profile.unlock
-  self:UpdateLock()
-  self:Print("UI " .. (self.db.profile.unlock and "unlocked" or "locked"))
 end
 
 function TR:UpdateVisibility()

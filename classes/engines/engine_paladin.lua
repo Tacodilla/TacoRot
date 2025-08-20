@@ -38,9 +38,7 @@ local function Pad() local p=TR and TR.db and TR.db.profile and TR.db.profile.pa
 local function BuffCfg() local p=TR and TR.db and TR.db.profile and TR.db.profile.buff; return (p and p[TOKEN]) or {enabled=true} end
 
 -- helpers
-local function Known(id)
-  return id and IsSpellKnown and IsSpellKnown(id)
-end
+local function Known(id) return id and (IsPlayerSpell and IsPlayerSpell(id) or (IsSpellKnown and IsSpellKnown(id))) end
 local function ReadyNow(id) if not Known(id) then return false end local s,d,en=GetSpellCooldown(id); if en==0 then return false end return (not s or s==0 or d==0) end
 local function ReadySoon(id)
   local pad = Pad()

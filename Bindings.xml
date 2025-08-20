@@ -1,10 +1,3 @@
 <Bindings>
-    <Binding name="TACOROTUNLOCK" header="TacoRot"> 
-        if TacoRot and TacoRot.db then 
-            TacoRot.db.profile.unlock = not TacoRot.db.profile.unlock
-            TacoRot:UpdateLock()
-            TacoRot:Print("UI " .. (TacoRot.db.profile.unlock and "unlocked" or "locked"))
-        end 
-    </Binding>
+    <Binding name="TACOROTUNLOCK" header="TacoRot"> if TacoRot and TacoRot.ToggleUnlock then TacoRot:ToggleUnlock() end </Binding>
 </Bindings>
-

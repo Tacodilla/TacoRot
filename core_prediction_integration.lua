@@ -155,7 +155,7 @@ function TR:GetOptimalUpdateInterval()
     local timeSinceLastCast = now - (self.lastCastTime or 0)
     local inCombat = UnitAffectingCombat("player")
     local isCasting = UnitCastingInfo("player") ~= nil or UnitChannelInfo("player") ~= nil
-    local isMoving = false -- Movement detection not available in 3.3.5a
+    local isMoving = GetUnitSpeed("player") > 0
 
     -- High frequency during active gameplay
     if isCasting or (inCombat and timeSinceLastCast < 2) then

@@ -22,9 +22,7 @@ local TOKEN = "MAGE"
 local function Pad() local p=TR and TR.db and TR.db.profile and TR.db.profile.pad; local v=p and p[TOKEN]; if not v then return {enabled=true,gcd=1.6} end; if v.enabled==nil then v.enabled=true end; v.gcd=v.gcd or 1.6; return v end
 local function BuffCfg() local p=TR and TR.db and TR.db.profile and TR.db.profile.buff; return (p and p[TOKEN]) or {enabled=true} end
 
-local function Known(id)
-  return id and IsSpellKnown and IsSpellKnown(id)
-end
+local function Known(id) return id and (IsPlayerSpell and IsPlayerSpell(id) or (IsSpellKnown and IsSpellKnown(id))) end
 local function ReadyNow(id)
   if not Known(id) then return false end
   local s,d,en = GetSpellCooldown(id)

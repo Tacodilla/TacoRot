@@ -6,6 +6,7 @@ local TR = _G.TacoRot or {}
 TR.PredictionCache = TR.PredictionCache or {}
 TR.LastGameState = TR.LastGameState or {}
 
+-- Enhanced game state tracking
 local function CaptureGameState()
     local state = {
         time = GetTime(),
@@ -19,20 +20,21 @@ local function CaptureGameState()
         hasTarget = UnitExists("target") and not UnitIsDead("target"),
         targetHealth = UnitExists("target") and UnitHealth("target") or 0,
         targetHealthMax = UnitExists("target") and UnitHealthMax("target") or 1,
-        isMoving = false, -- Movement detection not available in 3.3.5a
+        isMoving = GetUnitSpeed("player") > 0,
         isCasting = UnitCastingInfo("player") ~= nil or UnitChannelInfo("player") ~= nil,
-        gcdRemaining = 0,
+        gcdRemaining = 0, -- Will be calculated
         buffs = {},
         debuffs = {},
         cooldowns = {},
-        comboPoints = GetComboPoints and GetComboPoints() or 0, -- Fixed: no parameters in 3.3.5a
+        comboPoints = GetComboPoints and GetComboPoints("player", "target") or 0,
+        runes = {}, -- For DK
         energy = UnitPowerType("player") == 3 and UnitPower("player") or 0,
         rage = UnitPowerType("player") == 1 and UnitPower("player") or 0,
         mana = UnitPowerType("player") == 0 and UnitPower("player") or 0,
     }
 
-    -- Calculate GCD remaining using a spell that exists in 3.3.5a
-    local gcdStart, gcdDuration = GetSpellCooldown(75) -- Auto Shot
+    -- Calculate GCD remaining
+    local gcdStart, gcdDuration = GetSpellCooldown(61304) -- GCD spell ID
     if gcdStart and gcdStart > 0 and gcdDuration and gcdDuration > 0 then
         state.gcdRemaining = math.max(0, (gcdStart + gcdDuration) - GetTime())
     end
@@ -72,19 +74,6 @@ local function CaptureGameState()
     return state
 end
 
--- Basic 3.3.5a compatible cost detection
-local function GetSpellCostInfo_335(spellId)
-    if not spellId then return nil end
-
-    local spellName = GetSpellInfo(spellId)
-    if not spellName then return nil end
-
-    return {{
-        cost = 0, -- Safe default
-        type = 0  -- Mana by default
-    }}
-end
-
 -- Simulate casting a spell and predict the resulting game state
 local function SimulateSpellCast(currentState, spellId, castTime)
     if not spellId or not currentState then return currentState end
@@ -118,7 +107,7 @@ local function SimulateSpellCast(currentState, spellId, castTime)
     local actualCastTime = math.max(spellCastTime, 1.5) -- Minimum GCD
 
     -- Simulate resource changes based on spell
-    local powerCost = GetSpellCostInfo_335(spellId)
+    local powerCost = GetSpellPowerCost(spellId)
     if powerCost and powerCost[1] then
         local cost = powerCost[1].cost or 0
         local powerType = powerCost[1].type
@@ -230,7 +219,7 @@ local function PredictiveReadySoon(spellId, futureState, timeOffset)
     if not spellId then return false end
 
     -- Check if spell is known
-    if not (IsSpellKnown and IsSpellKnown(spellId)) then
+    if not (IsPlayerSpell and IsPlayerSpell(spellId) or (IsSpellKnown and IsSpellKnown(spellId))) then
         return false
     end
 
@@ -246,7 +235,7 @@ local function PredictiveReadySoon(spellId, futureState, timeOffset)
     end
 
     -- Check resource costs
-    local powerCost = GetSpellCostInfo_335(spellId)
+    local powerCost = GetSpellPowerCost(spellId)
     if powerCost and powerCost[1] then
         local cost = powerCost[1].cost or 0
         local powerType = powerCost[1].type
