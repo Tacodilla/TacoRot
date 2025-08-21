@@ -1,103 +1,67 @@
 <img width="197" height="84" alt="image" src="https://github.com/user-attachments/assets/407c86b2-439e-49d2-839f-cd485d1fe56a" />
 
-TacoRot – DPS Rotation Helper (Wrath 3.3.5)
+TacoRot Rotation Helper for Epoch (WotLK 3.3.5)
 
-TacoRot is a lightweight rotation helper built for new players, accessibility, and learning. It shows a 3-icon queue (now + next + later) so you can practice timing without reading guides mid-fight. The pack favors clear visuals, low configuration, and sensible defaults.
+TacoRot is a lightweight DPS rotation helper designed for Project Epoch’s Wrath of the Lich King 3.3.5 client. When installed, the addon displays a three‑icon queue—now, next, and later—to help you time abilities without alt‑tabbing to guides. It favours clear visuals, sensible defaults and a small footprint, making it ideal for newer players and anyone looking for a clean, distraction‑free rotation helper.
 
-Who this is for
+Features
 
-Players learning a class/spec for the first time
+Three‑icon queue: See your current cast suggestion plus two upcoming abilities. The secondary icons help you plan GCDs or movement.
 
-Anyone who benefits from simple visual prompts instead of dense UIs
+Auto‑detects your class and spec: Engines are included for Rogue, Warlock, Hunter, Druid, Warrior, Paladin, Mage, Priest and Shaman DPS specs. Each engine resolves spell ranks and updates as you level.
 
-Leveling characters (the engines include low-level padding so the queue never goes blank while you’re still unlocking spells)
+Padding and accessibility options: Optional low‑level padding keeps the queue alive while you’re still unlocking spells. You can customise icon size, whether secondary icons are shown, and enable a GCD sweep on the main icon.
 
-Game & classes
+Ace3 integration: TacoRot uses Ace3 libraries for its database, configuration and timers. It integrates with the standard Interface Options panel for easy configuration.
 
-Client: Wrath of the Lich King 3.3.5
-
-Focus: DPS only (no healing rotations)
-
-Classes supported: Hunter, Rogue, Warlock, Druid, Warrior, Paladin, Mage, Priest, Shaman
-
-Specs: DPS specs only (e.g., Ret, Shadow, Ele/Enh, Arms/Fury, Arcane/Fire/Frost). Tanks/healers are not prioritized.
-
-Install
+Installation
 
 Download or clone this repository.
 
-Copy the TacoRot folder into Interface\AddOns\ (keep the folder name).
+Copy the entire TacoRot folder into your Interface\AddOns\ directory. Keep the folder name unchanged—the client uses this folder name to register the addon.
 
-Launch the game and /reload.
+Launch the game and type /reload in chat to reload your UI.
 
-Load order note: each class has an *_ids.lua file and an engine_*.lua file. The IDs file must load before the engine.
+Note: Each class module has an ids.lua file and an engine.lua file. The addon’s TOC/XML files ensure the IDs file loads before the engine
+GitHub
+. If you modify the folder structure, make sure these paths remain correct or the class engines won’t initialise properly
+github.com
+.
 
-Quick start
+Slash Commands
 
-Target a dummy or mob.
+The addon registers two slash commands, /tacorot and /tr, which both accept the same sub‑commands:
 
-You’ll see three icons: main (left), next, later.
+Command	Action
+/tr or /tacorot	Opens the TacoRot configuration panel in the Interface Options.
+/tr unlock	Toggles whether the icon frames are locked. Unlocking allows you to drag the frames.
+/tr aoe	Toggles AoE mode. When enabled the engines hint AoE priorities (where implemented).
+/tr config	Shortcut to reopen the configuration panel.
 
-Cast what the main icon shows. The next two help you prepare GCDs and movement.
+Commands are not case‑sensitive. When no argument is supplied, TacoRot simply opens its options panel.
 
-Use the Options (below) to show/hide spells or change the “padding” window for low levels.
+Using the Addon
 
-Slash commands
-/tr                -> open TacoRot options
-/tr on             -> enable the engine for your current class
-/tr off            -> disable the engine for your current class
-/tr aoe on         -> hint engines to use AoE priorities (where implemented)
-/tr aoe off        -> return to single-target priorities
+Target a dummy or mob to start receiving rotation suggestions. The main icon shows what to cast now; the next two icons help you prepare upcoming abilities.
 
+Move and resize the UI: Use /tr unlock to unlock the frames, then drag them to your desired position. The default sizes are 52 px for the main icon and smaller sizes for the secondary icons, but you can adjust these under Main Icon Size and Next Icon Scale in the options.
 
-If /tr is unavailable in your build, open via Esc → Interface → AddOns → TacoRot.
+Configure spells and padding: Open /tr and navigate to Class → Spells to toggle individual abilities on or off. The Padding section lets you enable low‑level padding and adjust the look‑ahead window (default 1.60 s). Enabling padding prevents the queue from going blank when you’re still unlocking spells.
 
-Options menu
-
-Open /tr or go to Interface → AddOns → TacoRot. You’ll see:
-
-Class → Spells
-
-A toggle list of abilities the engine can propose.
-
-Uncheck a spell to prevent it from appearing in the queue (useful while leveling or if you prefer a variant).
-
-Class → Padding
-
-Enable low-level padding: keeps the queue alive with “soon-ready” abilities and safe fallbacks while you’re leveling.
-
-Pad window (seconds): the look-ahead time used by the queue.
-
-Default: 1.60s (about a GCD at low haste).
-
-Set to 0.00 for strict “ready now” behavior; increase slightly if you want earlier notice.
-
-Tip: Padding affects only the suggestion timing, not your actual cooldowns or casting.
-
-Accessibility choices
-
-Three big, readable icons instead of dense text or complicated overlays
-
-Low-level padding so the UI doesn’t degrade while spells unlock
-
-Minimal chat output; no sound spam; low CPU footprint
+AoE mode: Toggle AoE mode with /tr aoe. Some class engines implement AoE priorities; others are single‑target only.
 
 Troubleshooting
 
-Three red question marks:
+Three red question marks: This usually indicates the class ID table didn’t load before the engine. Make sure the ids.lua file is listed before the engine.lua file in the XML manifest
+github.com
+.
 
-Usually indicates the class ID table didn’t load before the engine. Ensure *_ids.lua loads before engine_*.lua in the addon's XML.
+No icons at very low levels: Enable padding and keep the default 1.60 s window so the addon can suggest soon‑available abilities.
 
-/reload after enabling a class.
-
-No icons at level 1–20:
-
-Enable Padding and keep the default 1.60s window.
-
-AoE not changing behavior:
-
-Some specs have AoE hints implemented; others are single-target only. Toggle with /tr aoe on|off.
+Missing Ace libraries: The addon uses several Ace3 libraries defined in embeds.xml
+github.com
+. If you restructure or nest the libs folder, update the paths in the embeds.xml so the WoW client can locate the libraries.
 
 Contributing
 
-Pull requests that improve readability, new-player clarity, or leveling coverage are welcome. Keep changes surgical and consistent with the existing engine/IDs structure (no healing specs).
+Pull requests that improve readability, new‑player clarity or add additional DPS specs are welcome. Please keep changes surgical and consistent with the existing engine/IDs structure (healing and tanking engines are out of scope). Always ensure ids.lua loads before engine.lua and test your changes on the 3.3.5 Epoch client before submitting.
