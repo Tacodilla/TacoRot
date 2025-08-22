@@ -205,6 +205,81 @@ local function RestoreUI()
     -- The GCD cooldown automatically follows the main icon since it uses SetAllPoints()
 end
 
+-- ================= Enhanced Frame Creation =================
+function TR:CreateEnhancedFrame(displayName, config)
+    local frame = CreateFrame("Frame", "TacoRot" .. tostring(displayName), UIParent)
+    frame:SetWidth(config.iconSize * config.numIcons + config.spacing * (config.numIcons - 1))
+    frame:SetHeight(config.iconSize)
+    frame:SetPoint(config.anchor, UIParent, config.anchor, config.x, config.y)
+
+    -- Backdrop for configuration mode
+    frame.backdrop = CreateFrame("Frame", nil, frame)
+    frame.backdrop:SetAllPoints()
+    frame.backdrop:SetBackdrop({
+        bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 16, edgeSize = 16,
+        insets = { left = 4, right = 4, top = 4, bottom = 4 },
+    })
+    frame.backdrop:SetBackdropColor(0, 0, 0, 0.8)
+    frame.backdrop:SetBackdropBorderColor(1, 1, 1, 1)
+    frame.backdrop:Hide()
+
+    return frame
+end
+
+-- ================= Icon Helpers =================
+function TR:CreateEnhancedIcon(parent, size)
+    local icon = CreateFrame("Button", nil, parent)
+    icon:SetSize(size, size)
+
+    icon.texture = icon:CreateTexture(nil, "ARTWORK")
+    icon.texture:SetAllPoints()
+    icon.texture:SetTexCoord(0.1, 0.9, 0.1, 0.9)
+
+    icon.border = icon:CreateTexture(nil, "OVERLAY")
+    icon.border:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
+    icon.border:SetAllPoints()
+    icon.border:Hide()
+
+    icon.cooldown = CreateFrame("Cooldown", nil, icon)
+    icon.cooldown:SetAllPoints()
+
+    icon.count = icon:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
+    icon.count:SetPoint("BOTTOMRIGHT", -2, 2)
+
+    icon.hotkey = icon:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmall")
+    icon.hotkey:SetPoint("TOPLEFT", 2, -2)
+
+    return icon
+end
+
+function TR:UpdateIconAppearance(icon, spellID, isUsable, inRange)
+    if not icon or not spellID then return end
+
+    local texture = GetSpellTexture(spellID)
+    if texture then
+        icon.texture:SetTexture(texture)
+        icon.texture:Show()
+    else
+        icon.texture:Hide()
+    end
+
+    if not isUsable then
+        icon.texture:SetVertexColor(0.4, 0.4, 0.4)
+    elseif not inRange then
+        icon.texture:SetVertexColor(1, 0.4, 0.4)
+    else
+        icon.texture:SetVertexColor(1, 1, 1)
+    end
+
+    if isUsable and inRange then
+        icon.border:Show()
+    else
+        icon.border:Hide()
+    end
+end
+
 -- ===== BLIZZARD GCD COOLDOWN UPDATE LOGIC =====
 local function UpdateGCDCooldown()
     if not TacoRotGCDCooldown then return end
