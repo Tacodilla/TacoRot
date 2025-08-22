@@ -97,60 +97,58 @@ local function BuildQueue()
   local q = {}
 
   if not HaveTarget() then
-    -- No target: favor pet upkeep out of combat, otherwise fall back
+    -- No target: favor pet upkeep out of combat, then show rotation anyway
     if not UnitAffectingCombat("player") then
       local pq = BuildPetQueue(); if pq and pq[1] then return pq end
     end
-    return { Fallback(), Fallback(), Fallback() }
+    -- Continue to rotation even without target
   end
-  
-  if HaveTarget() then
-    -- Out of combat buffs/setup
-    if not UnitAffectingCombat("player") then
-      if A and ReadySoon(A.HuntersMark) and not DebuffUpID("target", A.HuntersMark) then 
-        Push(q, A.HuntersMark) 
-      end
+
+  -- Out of combat buffs/setup
+  if not UnitAffectingCombat("player") then
+    if A and ReadySoon(A.HuntersMark) and not DebuffUpID("target", A.HuntersMark) then
+      Push(q, A.HuntersMark)
+    end
+  end
+
+  -- High priority abilities
+  if A and A.KillShot and ReadySoon(A.KillShot) then
+    Push(q, A.KillShot)
+  end
+
+  if InMelee() then
+    -- Melee range abilities
+    if A and ReadySoon(A.RaptorStrike) then
+      table.insert(q, 1, A.RaptorStrike)
+    end
+    if #q < 3 and A and ReadySoon(A.WingClip) then
+      Push(q, A.WingClip)
+    end
+  else
+    -- Ranged abilities
+    if A and ReadySoon(A.AimedShot) then
+      Push(q, A.AimedShot)
+    end
+    if A and ReadySoon(A.MultiShot) then
+      Push(q, A.MultiShot)
+    end
+    if A and ReadySoon(A.ArcaneShot) then
+      Push(q, A.ArcaneShot)
+    end
+    if A and ReadySoon(A.SteadyShot) then
+      Push(q, A.SteadyShot)
     end
 
-    -- High priority abilities
-    if A and A.KillShot and ReadySoon(A.KillShot) then 
-      Push(q, A.KillShot) 
+    -- Serpent Sting if not already on target
+    if #q < 3 and A and A.SerpentSting and not DebuffUpID("target", A.SerpentSting) and ReadySoon(A.SerpentSting) then
+      Push(q, A.SerpentSting)
     end
+  end -- end else (ranged)
 
-    if InMelee() then
-      -- Melee range abilities
-      if A and ReadySoon(A.RaptorStrike) then 
-        table.insert(q, 1, A.RaptorStrike) 
-      end
-      if #q < 3 and A and ReadySoon(A.WingClip) then 
-        Push(q, A.WingClip) 
-      end
-    else
-      -- Ranged abilities
-      if A and ReadySoon(A.AimedShot) then 
-        Push(q, A.AimedShot) 
-      end
-      if A and ReadySoon(A.MultiShot) then 
-        Push(q, A.MultiShot) 
-      end
-      if A and ReadySoon(A.ArcaneShot) then 
-        Push(q, A.ArcaneShot) 
-      end
-      if A and ReadySoon(A.SteadyShot) then 
-        Push(q, A.SteadyShot) 
-      end
-
-      -- Serpent Sting if not already on target
-      if #q < 3 and A and A.SerpentSting and not DebuffUpID("target", A.SerpentSting) and ReadySoon(A.SerpentSting) then
-        Push(q, A.SerpentSting)
-      end
-    end -- end else (ranged)
-
-    -- Auto Shot if nothing else and not active
-    if #q < 1 and A and A.AutoShot and not AutoShotActive() then 
-      Push(q, A.AutoShot) 
-    end
-  end -- end if HaveTarget()
+  -- Auto Shot if nothing else and not active
+  if #q < 1 and A and A.AutoShot and not AutoShotActive() then
+    Push(q, A.AutoShot)
+  end
 
   -- Only after prioritizing Auto Shot / Raptor logic, insert pet suggestions if nothing critical was queued
   if not UnitAffectingCombat("player") and (#q == 0) then

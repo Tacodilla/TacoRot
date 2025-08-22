@@ -173,18 +173,16 @@ function TR:EngineTick_Warlock()
   if not A or not next(A) then
     q = {SAFE,SAFE,SAFE}
   elseif not UnitAffectingCombat("player") then
-    -- Out of combat: prioritize pets, then buffs
+    -- Out of combat: prioritize pets, then buffs, then always show rotation
     local petQ = BuildPetQueue()
     local buffQ = BuildBuffQueue()
-    
+
     if petQ and petQ[1] then
       q = petQ
     elseif buffQ and buffQ[1] then
       q = buffQ
-    elseif HaveTarget() then
-      q = BuildQueue()
     else
-      q = {SAFE,SAFE,SAFE}
+      q = BuildQueue() -- Always show rotation, regardless of target
     end
   else
     q = BuildQueue()
