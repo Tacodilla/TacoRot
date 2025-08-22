@@ -78,6 +78,20 @@ local function BuildQueue()
   return q
 end
 
+-- Add keybind updates to existing engine recommendations
+local function UpdateKeybindsForRecommendations(recommendations)
+  if not TR.UI or not TR.UI.icons then return end
+
+  for i, spellID in ipairs(recommendations) do
+    if TR.UI.icons[i] and spellID then
+      local spellName = GetSpellInfo(spellID)
+      if spellName then
+        TR:UpdateIconKeybind(TR.UI.icons[i], spellName)
+      end
+    end
+  end
+end
+
 
 function TR:EngineTick_Rogue()
   IDS = ResolveIDS() or IDS
@@ -99,6 +113,7 @@ function TR:EngineTick_Rogue()
   q = pad3(q or {}, SAFE)
   self._lastMainSpell = q[1]
   if self.UI and self.UI.Update then self.UI:Update(q[1], q[2], q[3]) end
+  UpdateKeybindsForRecommendations({q[1], q[2], q[3]})
 end
 
 function TR:StartEngine_Rogue()

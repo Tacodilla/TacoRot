@@ -254,6 +254,59 @@ function TR:CreateEnhancedIcon(parent, size)
     return icon
 end
 
+-- Add function to create icons with keybind display
+function TR:CreateIconWithKeybind(parent, size)
+  local icon = CreateFrame("Button", nil, parent)
+  icon:SetSize(size, size)
+
+  -- Main texture
+  icon.texture = icon:CreateTexture(nil, "ARTWORK")
+  icon.texture:SetAllPoints()
+  icon.texture:SetTexCoord(0.1, 0.9, 0.1, 0.9)
+
+  -- Keybind text
+  icon.hotkey = icon:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmall")
+  icon.hotkey:SetPoint("TOPLEFT", 2, -2)
+  icon.hotkey:SetJustifyH("LEFT")
+  icon.hotkey:SetTextColor(1, 1, 1, 0.8)
+
+  -- Count text
+  icon.count = icon:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
+  icon.count:SetPoint("BOTTOMRIGHT", -2, 2)
+
+  return icon
+end
+
+-- Function to update keybind display on icons
+function TR:UpdateIconKeybind(icon, spellName)
+  if not icon or not icon.hotkey then return end
+
+  local settings = self.db.profile.keybinds or { enabled = true, lowercase = false }
+
+  if not settings.enabled then
+    icon.hotkey:SetText("")
+    return
+  end
+
+  local keybind = self:GetKeybindForSpell(spellName, settings.lowercase)
+
+  if keybind and keybind ~= "" then
+    local displayText = keybind
+    displayText = displayText:gsub("CTRL%-", "C-")
+    displayText = displayText:gsub("ALT%-", "A-")
+    displayText = displayText:gsub("SHIFT%-", "S-")
+    displayText = displayText:gsub("BUTTON", "M")
+
+    if string.len(displayText) > 6 then
+      displayText = string.sub(displayText, 1, 6)
+    end
+
+    icon.hotkey:SetText(displayText)
+  else
+    icon.hotkey:SetText("")
+  end
+end
+
 function TR:UpdateIconAppearance(icon, spellID, isUsable, inRange)
     if not icon or not spellID then return end
 

@@ -25,6 +25,11 @@ local function GetEnhancedDefaults()
       pad         = {},
       buff        = {},
       pet         = {},
+      keybinds    = {
+        enabled = true,
+        lowercase = false,
+      },
+      keybindDebug = false,
 
       -- New display system defaults
       displays = {
@@ -404,7 +409,69 @@ function TR:Slash(input)
     InterfaceOptionsFrame_OpenToCategory("TacoRot")
     return
   end
-  
+
+  if input:match("^keybind") or input:match("^kb") then
+    self:SlashKeybinds(input)
+    return
+  end
+
   -- Help text
   self:Print("Commands: /tr config, /tr unlock, /tr aoe")
+end
+
+-- Add this new function to core.lua
+function TR:SlashKeybinds(input)
+  if input == "keybinds test" or input == "kb test" then
+    self:TestKeybinds()
+    return
+  end
+
+  if input == "keybinds refresh" or input == "kb refresh" then
+    self:ReadKeybindings()
+    self:Print("Keybindings refreshed")
+    return
+  end
+
+  if input == "keybinds toggle" or input == "kb toggle" then
+    local enabled = self.db.profile.keybinds.enabled
+    self.db.profile.keybinds.enabled = not enabled
+    self:Print("Keybind display " .. (enabled and "disabled" or "enabled"))
+    return
+  end
+
+  if input == "keybinds debug on" then
+    self.db.profile.keybindDebug = true
+    self:Print("Keybind debug enabled")
+    return
+  end
+
+  if input == "keybinds debug off" then
+    self.db.profile.keybindDebug = false
+    self:Print("Keybind debug disabled")
+    return
+  end
+
+  if input == "keybinds info" or input == "kb info" then
+    self:Print("Current keybind data:")
+    local count = 0
+    for spell, data in pairs(self.Keys) do
+      local bind = self:GetKeybindForSpell(spell)
+      if bind ~= "" then
+        self:Print("  " .. spell .. " -> " .. bind)
+        count = count + 1
+      end
+    end
+    if count == 0 then
+      self:Print("  No keybinds found. Try '/tr kb test' for debug info.")
+    end
+    return
+  end
+
+  -- Help
+  self:Print("Keybind commands:")
+  self:Print("  /tr kb test - Debug keybind detection")
+  self:Print("  /tr kb info - Show current keybinds") 
+  self:Print("  /tr kb refresh - Refresh keybinds")
+  self:Print("  /tr kb toggle - Toggle keybind display")
+  self:Print("  /tr kb debug on/off - Toggle debug mode")
 end

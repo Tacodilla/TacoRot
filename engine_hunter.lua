@@ -163,6 +163,20 @@ local function BuildQueue()
   return pad3(q, Fallback())
 end
 
+-- Add keybind updates to existing engine recommendations
+local function UpdateKeybindsForRecommendations(recommendations)
+  if not TR.UI or not TR.UI.icons then return end
+
+  for i, spellID in ipairs(recommendations) do
+    if TR.UI.icons[i] and spellID then
+      local spellName = GetSpellInfo(spellID)
+      if spellName then
+        TR:UpdateIconKeybind(TR.UI.icons[i], spellName)
+      end
+    end
+  end
+end
+
 -- ===== Engine tick / timer =====
 function TR:EngineTick_Hunter()
   IDS = ResolveIDS() or IDS; A = (IDS and IDS.Ability) or A
@@ -179,13 +193,14 @@ function TR:EngineTick_Hunter()
   end
 
   self._lastMainSpell = q[1]
-  
+
   -- Use the correct UI update method
   if TR.UI_Update then
     TR.UI_Update(q[1], q[2], q[3])
-  elseif self.UI and self.UI.Update then 
-    self.UI:Update(q[1], q[2], q[3]) 
+  elseif self.UI and self.UI.Update then
+    self.UI:Update(q[1], q[2], q[3])
   end
+  UpdateKeybindsForRecommendations({q[1], q[2], q[3]})
 end
 
 function TR:StartEngine_Hunter()
