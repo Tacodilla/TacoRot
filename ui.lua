@@ -280,6 +280,42 @@ function TR:UpdateIconAppearance(icon, spellID, isUsable, inRange)
     end
 end
 
+function TR:UpdateIconKeybind(icon, spellName)
+    if not icon or not icon.hotkey then return end
+
+    local settings = self.db.profile.displays.Primary.keybinds or { enabled = true, lowercase = false }
+
+    if not settings.enabled then
+        icon.hotkey:SetText("")
+        return
+    end
+
+    local keybind = self.GetKeybindForSpell and self:GetKeybindForSpell(spellName, settings.lowercase)
+
+    if keybind and keybind ~= "" then
+        local displayText = keybind
+        displayText = displayText:gsub("CTRL%-", "C-")
+        displayText = displayText:gsub("ALT%-", "A-")
+        displayText = displayText:gsub("SHIFT%-", "S-")
+        displayText = displayText:gsub("BUTTON", "M")
+        if string.len(displayText) > 6 then
+            displayText = string.sub(displayText, 1, 6)
+        end
+        icon.hotkey:SetText(displayText)
+    else
+        icon.hotkey:SetText("")
+    end
+end
+
+function TR:CreateEnhancedIconWithKeybinds(parent, size)
+    local icon = self:CreateEnhancedIcon(parent, size)
+    icon.hotkey = icon.hotkey or icon:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmall")
+    icon.hotkey:SetPoint("TOPLEFT", 2, -2)
+    icon.hotkey:SetJustifyH("LEFT")
+    icon.hotkey:SetTextColor(1, 1, 1, 0.8)
+    return icon
+end
+
 -- ===== BLIZZARD GCD COOLDOWN UPDATE LOGIC =====
 local function UpdateGCDCooldown()
     if not TacoRotGCDCooldown then return end

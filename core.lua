@@ -39,6 +39,13 @@ local function GetEnhancedDefaults()
             outOfCombat = false,
             mounted = false,
           },
+          keybinds = {
+            enabled   = true,
+            lowercase = false,
+            font      = "Fonts\\FRIZQT__.TTF",
+            fontSize  = 12,
+            fontStyle = "OUTLINE",
+          },
         },
         Secondary = {
           enabled = false,
@@ -46,6 +53,13 @@ local function GetEnhancedDefaults()
           iconSize = 40,
           spacing = 5,
           position = { anchor = "CENTER", x = 0, y = 60 },
+          keybinds = {
+            enabled   = true,
+            lowercase = false,
+            font      = "Fonts\\FRIZQT__.TTF",
+            fontSize  = 10,
+            fontStyle = "OUTLINE",
+          },
         },
       },
 
@@ -381,8 +395,42 @@ function TR:ExitConfigMode()
   self:Print("Configuration mode disabled.")
 end
 
+-- Handle keybind-related slash commands
+function TR:SlashKeybinds(input)
+  if input == "keybinds refresh" or input == "kb refresh" then
+    if self.ReadKeybindings then
+      self:ReadKeybindings()
+    end
+    self:Print("Keybindings refreshed")
+    return
+  end
+
+  if input == "keybinds toggle" or input == "kb toggle" then
+    local enabled = self.db.profile.displays.Primary.keybinds.enabled
+    self.db.profile.displays.Primary.keybinds.enabled = not enabled
+    if self.RefreshDisplay then self:RefreshDisplay("Primary") end
+    self:Print("Keybind display " .. (enabled and "disabled" or "enabled"))
+    return
+  end
+
+  if input == "keybinds test" or input == "kb test" then
+    self:Print("Current keybind data:")
+    for spell, data in pairs(self.Keys or {}) do
+      local bind = self.GetKeybindForSpell and self:GetKeybindForSpell(spell)
+      if bind and bind ~= "" then
+        self:Print(spell .. " -> " .. bind)
+      end
+    end
+    return
+  end
+end
+
 function TR:Slash(input)
   input = (input or ""):lower()
+  if input:match("^keybind") or input:match("^kb") then
+    self:SlashKeybinds(input)
+    return
+  end
   if input == "" then
     InterfaceOptionsFrame_OpenToCategory("TacoRot")
     InterfaceOptionsFrame_OpenToCategory("TacoRot")

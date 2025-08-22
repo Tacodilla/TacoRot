@@ -248,3 +248,86 @@ local function GetEnhancedOptions()
   return options
 end
 
+local function GetKeybindOptions(displayName)
+  return {
+    keybinds = {
+      type = "group",
+      name = "Keybind Display",
+      order = 10,
+      args = {
+        enabled = {
+          type = "toggle",
+          name = "Show Keybinds",
+          desc = "Display keybind text on ability icons",
+          get = function()
+            return TR.db.profile.displays[displayName].keybinds.enabled
+          end,
+          set = function(_, val)
+            TR.db.profile.displays[displayName].keybinds.enabled = val
+            if TR.RefreshDisplay then TR:RefreshDisplay(displayName) end
+          end,
+          order = 1,
+        },
+
+        lowercase = {
+          type = "toggle",
+          name = "Lowercase",
+          desc = "Display keybinds in lowercase",
+          get = function()
+            return TR.db.profile.displays[displayName].keybinds.lowercase
+          end,
+          set = function(_, val)
+            TR.db.profile.displays[displayName].keybinds.lowercase = val
+            if TR.RefreshDisplay then TR:RefreshDisplay(displayName) end
+          end,
+          disabled = function()
+            return not TR.db.profile.displays[displayName].keybinds.enabled
+          end,
+          order = 2,
+        },
+
+        font = {
+          type = "select",
+          name = "Font",
+          desc = "Font for keybind text",
+          values = {
+            ["Fonts\\FRIZQT__.TTF"] = "Default",
+            ["Fonts\\ARIALN.TTF"] = "Arial Narrow",
+            ["Interface\\AddOns\\TacoRot\\Fonts\\PT_Sans_Narrow.ttf"] = "PT Sans Narrow",
+          },
+          get = function()
+            return TR.db.profile.displays[displayName].keybinds.font or "Fonts\\FRIZQT__.TTF"
+          end,
+          set = function(_, val)
+            TR.db.profile.displays[displayName].keybinds.font = val
+            if TR.RefreshDisplay then TR:RefreshDisplay(displayName) end
+          end,
+          disabled = function()
+            return not TR.db.profile.displays[displayName].keybinds.enabled
+          end,
+          order = 3,
+        },
+
+        fontSize = {
+          type = "range",
+          name = "Font Size",
+          min = 8,
+          max = 20,
+          step = 1,
+          get = function()
+            return TR.db.profile.displays[displayName].keybinds.fontSize or 12
+          end,
+          set = function(_, val)
+            TR.db.profile.displays[displayName].keybinds.fontSize = val
+            if TR.RefreshDisplay then TR:RefreshDisplay(displayName) end
+          end,
+          disabled = function()
+            return not TR.db.profile.displays[displayName].keybinds.enabled
+          end,
+          order = 4,
+        },
+      },
+    },
+  }
+end
+
