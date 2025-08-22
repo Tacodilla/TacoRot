@@ -8,6 +8,12 @@
 embeds.xml
 Bindings.xml
 Compat-335.lua
+TacoRot_Boot.lua
+TacoRot_EventCore.lua
+TacoRot_Profiler.lua
+TacoRot_Keybinds.lua
+TacoRot_CastTracker.lua
+TacoRot_ConfigMode.lua
 core.lua
 ui_safe_override.lua
 ui.lua
