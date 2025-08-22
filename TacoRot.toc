@@ -12,6 +12,7 @@ core.lua
 ui_safe_override.lua
 ui.lua
 options.lua
+state.lua
 
 # Engines & IDs are included via XML to keep order clean
 engines.xml
