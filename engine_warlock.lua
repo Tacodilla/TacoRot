@@ -34,15 +34,18 @@ local function PetCfg() local p=TR and TR.db and TR.db.profile and TR.db.profile
 local function Known(id) return id and (IsPlayerSpell and IsPlayerSpell(id) or (IsSpellKnown and IsSpellKnown(id))) end
 local function ReadyNow(id) if not Known(id) then return false end local s,d,en = GetSpellCooldown(id); if en==0 then return false end return (not s or s==0 or d==0) end
 local function ReadySoon(id)
-  local pad = Pad()
-  if not pad.enabled then return ReadyNow(id) end
   if not Known(id) then return false end
-  local start, duration, enabled = GetSpellCooldown(id)
-  if enabled == 0 then return false end
-  if (not start or start == 0 or duration == 0) then return true end
-  local gcd = 1.5
-  local remaining = (start + duration) - GetTime()
-  return remaining <= (pad.gcd + gcd)
+  local pad = Pad()
+  if not pad.enabled then
+    return TR:IsAbilityReadySoon(id, 0)
+  end
+  return TR:IsAbilityReadySoon(id, pad.gcd)
+end
+
+local function SafeCheck(func, ...)
+  if type(func) ~= "function" then return false end
+  local ok, res = pcall(func, ...)
+  return ok and res
 end
 local function DebuffUpID(u, id) if not id then return false end local wanted=GetSpellInfo(id) for i=1,40 do local name,_,_,_,_,_,_,caster,_,_,sid=UnitDebuff(u,i); if not name then break end if sid==id or (name==wanted and caster=="player") then return true end end return false end
 local function BuffUpID(u, id) if not id then return false end local wanted=GetSpellInfo(id); if not wanted then return false end for i=1,40 do local name,_,_,_,_,_,_,_,_,_,sid=UnitBuff(u,i); if not name then break end if sid==id or name==wanted then return true end end return false end
@@ -81,9 +84,9 @@ local function BuildBuffQueue()
   
   -- If no armor buff, prioritize: Fel Armor > Demon Skin
   if not hasArmorBuff then
-    if fa and ReadySoon(fa) and (cfg.felArmor ~= false) then
+    if fa and SafeCheck(ReadySoon, fa) and (cfg.felArmor ~= false) then
       Push(q, fa)
-    elseif ds and ReadySoon(ds) and (cfg.demonSkin ~= false) then
+    elseif ds and SafeCheck(ReadySoon, ds) and (cfg.demonSkin ~= false) then
       Push(q, ds)
     end
   end
@@ -116,7 +119,7 @@ local function BuildPetQueue()
   local q = {}
   if not HasPet() then
     local demon = BestDemon()
-    if demon and ReadySoon(demon) then Push(q, demon) end
+    if demon and SafeCheck(ReadySoon, demon) then Push(q, demon) end
   end
   return q
 end
@@ -128,21 +131,21 @@ local function BuildQueue()
   local q = {}
   local tree = PrimaryTab()
 
-  if A.Corruption and not DebuffUpID("target", A.Corruption) and ReadySoon(A.Corruption) then Push(q, A.Corruption) end
-  if A.CurseOfAgony and not DebuffUpID("target", A.CurseOfAgony) and ReadySoon(A.CurseOfAgony) then Push(q, A.CurseOfAgony) end
+  if A.Corruption and not DebuffUpID("target", A.Corruption) and SafeCheck(ReadySoon, A.Corruption) then Push(q, A.Corruption) end
+  if A.CurseOfAgony and not DebuffUpID("target", A.CurseOfAgony) and SafeCheck(ReadySoon, A.CurseOfAgony) then Push(q, A.CurseOfAgony) end
 
-  if A.UnstableAffliction and not DebuffUpID("target", A.UnstableAffliction) and ReadySoon(A.UnstableAffliction) then
+  if A.UnstableAffliction and not DebuffUpID("target", A.UnstableAffliction) and SafeCheck(ReadySoon, A.UnstableAffliction) then
     Push(q, A.UnstableAffliction)
   end
 
   if tree == 3 then
-    if A.Immolate and not DebuffUpID("target", A.Immolate) and ReadySoon(A.Immolate) then Push(q, A.Immolate) end
-    if A.Conflagrate and DebuffUpID("target", A.Immolate) and ReadySoon(A.Conflagrate) then Push(q, A.Conflagrate) end
+    if A.Immolate and not DebuffUpID("target", A.Immolate) and SafeCheck(ReadySoon, A.Immolate) then Push(q, A.Immolate) end
+    if A.Conflagrate and DebuffUpID("target", A.Immolate) and SafeCheck(ReadySoon, A.Conflagrate) then Push(q, A.Conflagrate) end
   end
 
-  if A.ShadowBolt and ReadySoon(A.ShadowBolt) then Push(q, A.ShadowBolt) end
+  if A.ShadowBolt and SafeCheck(ReadySoon, A.ShadowBolt) then Push(q, A.ShadowBolt) end
 
-  if UnitPower("player", 0) / UnitPowerMax("player", 0) < 0.2 and A.LifeTap and ReadySoon(A.LifeTap) then
+  if UnitPower("player", 0) / UnitPowerMax("player", 0) < 0.2 and A.LifeTap and SafeCheck(ReadySoon, A.LifeTap) then
     Push(q, A.LifeTap)
   end
 
@@ -180,10 +183,12 @@ function TR:EngineTick_Warlock()
   self._lastMainSpell = q[1]
   
   -- Fix UI update call
-  if TR.UI_Update then
-    TR.UI_Update(q[1], q[2], q[3])
-  elseif self.UI and self.UI.Update then 
-    self.UI:Update(q[1], q[2], q[3]) 
+  if TR:ShouldUpdateSuggestions(q) then
+    if TR.UI_Update then
+      TR.UI_Update(q[1], q[2], q[3])
+    elseif self.UI and self.UI.Update then
+      self.UI:Update(q[1], q[2], q[3])
+    end
   end
 end
 

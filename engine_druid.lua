@@ -34,15 +34,18 @@ local function PetCfg() local p=TR and TR.db and TR.db.profile and TR.db.profile
 local function Known(id) return id and (IsPlayerSpell and IsPlayerSpell(id) or (IsSpellKnown and IsSpellKnown(id))) end
 local function ReadyNow(id) if not Known(id) then return false end local s,d,en = GetSpellCooldown(id); if en==0 then return false end return (not s or s==0 or d==0) end
 local function ReadySoon(id)
-  local pad = Pad()
-  if not pad.enabled then return ReadyNow(id) end
   if not Known(id) then return false end
-  local start, duration, enabled = GetSpellCooldown(id)
-  if enabled == 0 then return false end
-  if (not start or start == 0 or duration == 0) then return true end
-  local gcd = 1.5
-  local remaining = (start + duration) - GetTime()
-  return remaining <= (pad.gcd + gcd)
+  local pad = Pad()
+  if not pad.enabled then
+    return TR:IsAbilityReadySoon(id, 0)
+  end
+  return TR:IsAbilityReadySoon(id, pad.gcd)
+end
+
+local function SafeCheck(func, ...)
+  if type(func) ~= "function" then return false end
+  local ok, res = pcall(func, ...)
+  return ok and res
 end
 local function DebuffUpID(u, id) if not id then return false end local wanted=GetSpellInfo(id) for i=1,40 do local name,_,_,_,_,_,_,caster,_,_,sid=UnitDebuff(u,i); if not name then break end if sid==id or (name==wanted and caster=="player") then return true end end return false end
 local function BuffUpID(u, id) if not id then return false end local wanted=GetSpellInfo(id); if not wanted then return false end for i=1,40 do local name,_,_,_,_,_,_,_,_,_,sid=UnitBuff(u,i); if not name then break end if sid==id or name==wanted then return true end end return false end
@@ -76,8 +79,8 @@ end
 local function BuildBuffQueue()
   local cfg = BuffCfg(); if not (cfg.enabled ~= false) then return end
   local q = {}
-  if (cfg.mark ~= false) then local m=MarkID(); if m and not BuffUpID("player", m) and ReadySoon(m) then Push(q, m) end end
-  if (cfg.thorns ~= false) then local t=ThornsID(); if t and not BuffUpID("player", t) and ReadySoon(t) then Push(q, t) end end
+  if (cfg.mark ~= false) then local m=MarkID(); if m and not BuffUpID("player", m) and SafeCheck(ReadySoon, m) then Push(q, m) end end
+  if (cfg.thorns ~= false) then local t=ThornsID(); if t and not BuffUpID("player", t) and SafeCheck(ReadySoon, t) then Push(q, t) end end
   return q
 end
 
@@ -96,27 +99,27 @@ local function BuildQueue()
     if InMelee() and not AutoAttackActive() then
       table.insert(q, 1, 6603) -- Attack spell ID
     end
-    if A and ReadySoon(A.MangleCat) then Push(q, A.MangleCat) end
-    if A and ReadySoon(A.Shred) then Push(q, A.Shred) end
-    if A and A.Rake and not DebuffUpID("target", A.Rake) and ReadySoon(A.Rake) then Push(q, A.Rake) end
-    if A and ReadySoon(A.FerociousBite) then Push(q, A.FerociousBite) end
+    if A and SafeCheck(ReadySoon, A.MangleCat) then Push(q, A.MangleCat) end
+    if A and SafeCheck(ReadySoon, A.Shred) then Push(q, A.Shred) end
+    if A and A.Rake and not DebuffUpID("target", A.Rake) and SafeCheck(ReadySoon, A.Rake) then Push(q, A.Rake) end
+    if A and SafeCheck(ReadySoon, A.FerociousBite) then Push(q, A.FerociousBite) end
     
   elseif InBearForm() then
     -- Bear form - tank/melee
     if InMelee() and not AutoAttackActive() then
       table.insert(q, 1, 6603) -- Attack spell ID
     end
-    if A and ReadySoon(A.MangleBear) then Push(q, A.MangleBear) end
-    if A and ReadySoon(A.Maul) then Push(q, A.Maul) end
+    if A and SafeCheck(ReadySoon, A.MangleBear) then Push(q, A.MangleBear) end
+    if A and SafeCheck(ReadySoon, A.Maul) then Push(q, A.Maul) end
     
   else
     -- Caster form - Balance spells
-    if A and A.InsectSwarm and not DebuffUpID("target", A.InsectSwarm) and ReadySoon(A.InsectSwarm) then Push(q, A.InsectSwarm) end
-    if A and A.Moonfire and not DebuffUpID("target", A.Moonfire) and ReadySoon(A.Moonfire) then Push(q, A.Moonfire) end
-    if A and ReadySoon(A.Wrath) then Push(q, A.Wrath) end
+    if A and A.InsectSwarm and not DebuffUpID("target", A.InsectSwarm) and SafeCheck(ReadySoon, A.InsectSwarm) then Push(q, A.InsectSwarm) end
+    if A and A.Moonfire and not DebuffUpID("target", A.Moonfire) and SafeCheck(ReadySoon, A.Moonfire) then Push(q, A.Moonfire) end
+    if A and SafeCheck(ReadySoon, A.Wrath) then Push(q, A.Wrath) end
     
     -- If no target and low level, suggest cat form for melee
-    if not HaveTarget() and UnitLevel("player") < 10 and A and A.CatForm and ReadySoon(A.CatForm) then
+    if not HaveTarget() and UnitLevel("player") < 10 and A and A.CatForm and SafeCheck(ReadySoon, A.CatForm) then
       Push(q, A.CatForm)
     end
   end
@@ -145,10 +148,12 @@ function TR:EngineTick_Druid()
   self._lastMainSpell = q[1]
   
   -- Fix UI update call
-  if TR.UI_Update then
-    TR.UI_Update(q[1], q[2], q[3])
-  elseif self.UI and self.UI.Update then 
-    self.UI:Update(q[1], q[2], q[3]) 
+  if TR:ShouldUpdateSuggestions(q) then
+    if TR.UI_Update then
+      TR.UI_Update(q[1], q[2], q[3])
+    elseif self.UI and self.UI.Update then
+      self.UI:Update(q[1], q[2], q[3])
+    end
   end
 end
 
