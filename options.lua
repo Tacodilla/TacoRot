@@ -236,6 +236,35 @@ local function GetEnhancedOptions()
         },
       },
 
+      keybinds = {
+        type = "group",
+        name = "Keybind Display",
+        order = 15,
+        args = {
+          enabled = {
+            type = "toggle",
+            name = "Show Keybinds",
+            desc = "Display keybind text on ability icons",
+            get = function() return TR.db.profile.keybinds.enabled end,
+            set = function(_, val) 
+              TR.db.profile.keybinds.enabled = val
+              TR:Print("Keybind display " .. (val and "enabled" or "disabled"))
+            end,
+            order = 1
+          },
+
+          lowercase = {
+            type = "toggle", 
+            name = "Lowercase",
+            desc = "Display keybinds in lowercase",
+            get = function() return TR.db.profile.keybinds.lowercase end,
+            set = function(_, val) TR.db.profile.keybinds.lowercase = val end,
+            disabled = function() return not TR.db.profile.keybinds.enabled end,
+            order = 2
+          }
+        }
+      },
+
       classes = {
         type = "group",
         name = "Class Settings",
