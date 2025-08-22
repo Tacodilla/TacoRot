@@ -41,15 +41,18 @@ local function BuffCfg() local p=TR and TR.db and TR.db.profile and TR.db.profil
 local function Known(id) return id and (IsPlayerSpell and IsPlayerSpell(id) or (IsSpellKnown and IsSpellKnown(id))) end
 local function ReadyNow(id) if not Known(id) then return false end local s,d,en=GetSpellCooldown(id); if en==0 then return false end return (not s or s==0 or d==0) end
 local function ReadySoon(id)
-  local pad = Pad()
-  if not pad.enabled then return ReadyNow(id) end
   if not Known(id) then return false end
-  local start, duration, enabled = GetSpellCooldown(id)
-  if enabled == 0 then return false end
-  if (not start or start == 0 or duration == 0) then return true end
-  local gcd = 1.5
-  local remaining = (start + duration) - GetTime()
-  return remaining <= (pad.gcd + gcd)
+  local pad = Pad()
+  if not pad.enabled then
+    return TR:IsAbilityReadySoon(id, 0)
+  end
+  return TR:IsAbilityReadySoon(id, pad.gcd)
+end
+
+local function SafeCheck(func, ...)
+  if type(func) ~= "function" then return false end
+  local ok, res = pcall(func, ...)
+  return ok and res
 end
 local function DebuffUpID(u, id) if not id then return false end local wanted=GetSpellInfo(id) for i=1,40 do local name,_,_,_,_,_,_,caster,_,_,sid=UnitDebuff(u,i); if not name then break end if sid==id or (name==wanted and caster=="player") then return true end end return false end
 local function BuffUpID(u, id) if not id then return false end local wanted=GetSpellInfo(id); if not wanted then return false end for i=1,40 do local name,_,_,_,_,_,_,_,_,_,sid=UnitBuff(u,i); if not name then break end if sid==id or name==wanted then return true end end return false end
@@ -73,7 +76,7 @@ end
 local function BuildBuffQueue()
   local cfg = BuffCfg(); if not (cfg.enabled ~= false and (cfg.battleShout ~= false)) then return end
   local q = {}
-  if A and A.BattleShout and not BuffUpID("player", A.BattleShout) and ReadySoon(A.BattleShout) then Push(q, A.BattleShout) end
+  if A and A.BattleShout and not BuffUpID("player", A.BattleShout) and SafeCheck(ReadySoon, A.BattleShout) then Push(q, A.BattleShout) end
   return q
 end
 
@@ -90,18 +93,18 @@ local function BuildQueue()
   end
   
   if tree == 1 then
-    if A and A.Rend and not DebuffUpID("target", A.Rend) and ReadySoon(A.Rend) then Push(q, A.Rend) end
-    if A and ReadySoon(A.Overpower) then Push(q, A.Overpower) end
-    if A and ReadySoon(A.MortalStrike) then Push(q, A.MortalStrike) end
-    if A and UnitHealth("target")>1 and (UnitHealth("target")/UnitHealthMax("target"))<=0.2 and ReadySoon(A.Execute) then Push(q, A.Execute) end
-    if A and ReadySoon(A.Slam) then Push(q, A.Slam) end
-    if A and Rage()>50 and ReadySoon(A.HeroicStrike) then Push(q, A.HeroicStrike) end
+    if A and A.Rend and not DebuffUpID("target", A.Rend) and SafeCheck(ReadySoon, A.Rend) then Push(q, A.Rend) end
+    if A and SafeCheck(ReadySoon, A.Overpower) then Push(q, A.Overpower) end
+    if A and SafeCheck(ReadySoon, A.MortalStrike) then Push(q, A.MortalStrike) end
+    if A and UnitHealth("target")>1 and (UnitHealth("target")/UnitHealthMax("target"))<=0.2 and SafeCheck(ReadySoon, A.Execute) then Push(q, A.Execute) end
+    if A and SafeCheck(ReadySoon, A.Slam) then Push(q, A.Slam) end
+    if A and Rage()>50 and SafeCheck(ReadySoon, A.HeroicStrike) then Push(q, A.HeroicStrike) end
   else
-    if A and ReadySoon(A.Bloodthirst) then Push(q, A.Bloodthirst) end
-    if A and ReadySoon(A.Whirlwind) then Push(q, A.Whirlwind) end
-    if A and ReadySoon(A.Slam) then Push(q, A.Slam) end
-    if A and UnitHealth("target")>1 and (UnitHealth("target")/UnitHealthMax("target"))<=0.2 and ReadySoon(A.Execute) then Push(q, A.Execute) end
-    if A and Rage()>50 and ReadySoon(A.HeroicStrike) then Push(q, A.HeroicStrike) end
+    if A and SafeCheck(ReadySoon, A.Bloodthirst) then Push(q, A.Bloodthirst) end
+    if A and SafeCheck(ReadySoon, A.Whirlwind) then Push(q, A.Whirlwind) end
+    if A and SafeCheck(ReadySoon, A.Slam) then Push(q, A.Slam) end
+    if A and UnitHealth("target")>1 and (UnitHealth("target")/UnitHealthMax("target"))<=0.2 and SafeCheck(ReadySoon, A.Execute) then Push(q, A.Execute) end
+    if A and Rage()>50 and SafeCheck(ReadySoon, A.HeroicStrike) then Push(q, A.HeroicStrike) end
   end
   return q
 end
@@ -129,10 +132,12 @@ function TR:EngineTick_Warrior()
   self._lastMainSpell = q[1]
   
   -- Fix UI update call
-  if TR.UI_Update then
-    TR.UI_Update(q[1], q[2], q[3])
-  elseif self.UI and self.UI.Update then 
-    self.UI:Update(q[1], q[2], q[3]) 
+  if TR:ShouldUpdateSuggestions(q) then
+    if TR.UI_Update then
+      TR.UI_Update(q[1], q[2], q[3])
+    elseif self.UI and self.UI.Update then
+      self.UI:Update(q[1], q[2], q[3])
+    end
   end
 end
 

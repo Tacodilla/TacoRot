@@ -41,15 +41,18 @@ local function BuffCfg() local p=TR and TR.db and TR.db.profile and TR.db.profil
 local function Known(id) return id and (IsPlayerSpell and IsPlayerSpell(id) or (IsSpellKnown and IsSpellKnown(id))) end
 local function ReadyNow(id) if not Known(id) then return false end local s,d,en=GetSpellCooldown(id); if en==0 then return false end return (not s or s==0 or d==0) end
 local function ReadySoon(id)
-  local pad = Pad()
-  if not pad.enabled then return ReadyNow(id) end
   if not Known(id) then return false end
-  local start, duration, enabled = GetSpellCooldown(id)
-  if enabled == 0 then return false end
-  if (not start or start == 0 or duration == 0) then return true end
-  local gcd = 1.5
-  local remaining = (start + duration) - GetTime()
-  return remaining <= (pad.gcd + gcd)
+  local pad = Pad()
+  if not pad.enabled then
+    return TR:IsAbilityReadySoon(id, 0)
+  end
+  return TR:IsAbilityReadySoon(id, pad.gcd)
+end
+
+local function SafeCheck(func, ...)
+  if type(func) ~= "function" then return false end
+  local ok, res = pcall(func, ...)
+  return ok and res
 end
 local function DebuffUpID(u, id) if not id then return false end local wanted=GetSpellInfo(id) for i=1,40 do local name,_,_,_,_,_,_,caster,_,_,sid=UnitDebuff(u,i); if not name then break end if sid==id or (name==wanted and caster=="player") then return true end end return false end
 local function BuffUpID(u, id) if not id then return false end local wanted=GetSpellInfo(id); if not wanted then return false end for i=1,40 do local name,_,_,_,_,_,_,_,_,_,sid=UnitBuff(u,i); if not name then break end if sid==id or name==wanted then return true end end return false end
@@ -81,7 +84,7 @@ local function BuildBuffQueue()
   local cfg = BuffCfg(); if not (cfg.enabled ~= false and (cfg.lightningShield ~= false)) then return end
   local q = {}
   local ls = LSID()
-  if ls and not BuffUpID("player", ls) and ReadySoon(ls) then Push(q, ls) end
+  if ls and not BuffUpID("player", ls) and SafeCheck(ReadySoon, ls) then Push(q, ls) end
   return q
 end
 
@@ -93,10 +96,10 @@ local function BuildQueue()
   
   if tree == 1 then
     -- Elemental - ranged caster
-    if A and A.FlameShock and not DebuffUpID("target", A.FlameShock) and ReadySoon(A.FlameShock) then Push(q, A.FlameShock) end
-    if A and ReadySoon(A.MoltenBlast) then Push(q, A.MoltenBlast) end
-    if A and ReadySoon(A.LightningBolt) then Push(q, A.LightningBolt) end
-    if A and ReadySoon(A.ChainLightning) then Push(q, A.ChainLightning) end
+    if A and A.FlameShock and not DebuffUpID("target", A.FlameShock) and SafeCheck(ReadySoon, A.FlameShock) then Push(q, A.FlameShock) end
+    if A and SafeCheck(ReadySoon, A.MoltenBlast) then Push(q, A.MoltenBlast) end
+    if A and SafeCheck(ReadySoon, A.LightningBolt) then Push(q, A.LightningBolt) end
+    if A and SafeCheck(ReadySoon, A.ChainLightning) then Push(q, A.ChainLightning) end
   else
     -- Enhancement - melee
     -- Auto attack first if not active and in range (crucial for Enhancement)
@@ -104,9 +107,9 @@ local function BuildQueue()
       table.insert(q, 1, 6603) -- Attack spell ID
     end
     
-    if A and ReadySoon(A.Stormstrike) then Push(q, A.Stormstrike) end
-    if A and ReadySoon(A.LavaLash) then Push(q, A.LavaLash) end
-    if A and ReadySoon(A.EarthShock) then Push(q, A.EarthShock) end
+    if A and SafeCheck(ReadySoon, A.Stormstrike) then Push(q, A.Stormstrike) end
+    if A and SafeCheck(ReadySoon, A.LavaLash) then Push(q, A.LavaLash) end
+    if A and SafeCheck(ReadySoon, A.EarthShock) then Push(q, A.EarthShock) end
   end
   return q
 end
@@ -134,10 +137,12 @@ function TR:EngineTick_Shaman()
   self._lastMainSpell = q[1]
   
   -- Fix UI update call
-  if TR.UI_Update then
-    TR.UI_Update(q[1], q[2], q[3])
-  elseif self.UI and self.UI.Update then 
-    self.UI:Update(q[1], q[2], q[3]) 
+  if TR:ShouldUpdateSuggestions(q) then
+    if TR.UI_Update then
+      TR.UI_Update(q[1], q[2], q[3])
+    elseif self.UI and self.UI.Update then
+      self.UI:Update(q[1], q[2], q[3])
+    end
   end
 end
 

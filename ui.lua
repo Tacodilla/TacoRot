@@ -3,6 +3,7 @@
 
 local TR = _G.TacoRot
 if not TR then return end
+local floor = math.floor
 
 -- ===== QUALITY IMPROVEMENT: Better error handling and validation =====
 local function SafeCall(func, ...)
@@ -119,6 +120,37 @@ local function CreateIconFrame(name, parent, size, x, y)
     highlight:Hide()
     f.highlight = highlight
 
+    -- Keybind overlay
+    local keybindText = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    keybindText:SetPoint("BOTTOM", f, "BOTTOM", 0, 2)
+    keybindText:SetTextColor(1, 1, 0.5)
+    f.keybind = keybindText
+
+    -- Cooldown sweep
+    local cooldown = CreateFrame("Cooldown", nil, f, "CooldownFrameTemplate")
+    cooldown:SetAllPoints(f)
+    f.cooldown = cooldown
+
+    -- Priority number
+    local priorityText = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    priorityText:SetPoint("TOPRIGHT", f, "TOPRIGHT", -2, -2)
+    priorityText:SetTextColor(1, 1, 1, 0.9)
+    f.priority = priorityText
+
+    -- Conditional border
+    local border = f:CreateTexture(nil, "OVERLAY")
+    border:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
+    border:SetBlendMode("ADD")
+    border:SetAllPoints(f)
+    border:Hide()
+    f.border = border
+
+    -- Spell name display
+    local nameText = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    nameText:SetPoint("BOTTOM", f, "TOP", 0, 2)
+    nameText:SetTextColor(1, 1, 1)
+    f.spellName = nameText
+
     f:Show()
     return f
 end
@@ -152,14 +184,116 @@ local function CreateGCDCooldown(parent)
 end
 
 -- ===== FRAME CREATION WITH ERROR HANDLING =====
-TacoRotWindow = TacoRotWindow or SafeCall(CreateIconFrame, "TacoRotWindow", UIParent, 52, -90, 0)
-TacoRotWindow2 = TacoRotWindow2 or SafeCall(CreateIconFrame, "TacoRotWindow2", UIParent, 40, -40, 0)
-TacoRotWindow3 = TacoRotWindow3 or SafeCall(CreateIconFrame, "TacoRotWindow3", UIParent, 32, 0, 0)
+local function CreateAllFrames()
+    TacoRotWindow = SafeCall(CreateIconFrame, "TacoRotWindow", UIParent, 52, -90, 0)
+    TacoRotWindow2 = SafeCall(CreateIconFrame, "TacoRotWindow2", UIParent, 40, -40, 0)
+    TacoRotWindow3 = SafeCall(CreateIconFrame, "TacoRotWindow3", UIParent, 32, 0, 0)
 
--- Create GCD Cooldown using Blizzard's system
-TacoRotGCDCooldown = nil
-if TacoRotWindow then
     TacoRotGCDCooldown = SafeCall(CreateGCDCooldown, TacoRotWindow)
+
+    -- Resource display
+    local resourceBar = CreateFrame("StatusBar", nil, TacoRotWindow)
+    resourceBar:SetSize(120, 8)
+    resourceBar:SetPoint("BOTTOM", TacoRotWindow, "TOP", 0, 2)
+    resourceBar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
+    TR.ResourceBar = resourceBar
+
+    local resourceText = resourceBar:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    resourceText:SetPoint("CENTER")
+    TR.ResourceText = resourceText
+
+    -- AoE toggle button
+    local aoeButton = CreateFrame("Button", "TacoRotAoEButton", UIParent, "SecureActionButtonTemplate")
+    aoeButton:SetSize(40, 40)
+    aoeButton:SetPoint("LEFT", TacoRotWindow, "RIGHT", 5, 0)
+    aoeButton:SetNormalTexture("Interface\\Icons\\Spell_Fire_SelfDestruct")
+    aoeButton:RegisterForClicks("AnyUp")
+
+    local aoeHighlight = aoeButton:CreateTexture(nil, "OVERLAY")
+    aoeHighlight:SetTexture("Interface\\Buttons\\CheckButtonHilight")
+    aoeHighlight:SetBlendMode("ADD")
+    aoeHighlight:SetAllPoints()
+    aoeHighlight:Hide()
+    aoeButton.highlight = aoeHighlight
+
+    aoeButton:SetScript("OnClick", function()
+        if not TR.db or not TR.db.profile then return end
+        TR.db.profile.aoe = not TR.db.profile.aoe
+        if TR.db.profile.aoe then
+            aoeButton.highlight:Show()
+            print("|cff00ff00AoE Mode: ON|r")
+        else
+            aoeButton.highlight:Hide()
+            print("|cffff0000AoE Mode: OFF|r")
+        end
+    end)
+
+    aoeButton:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText("Toggle AoE Mode")
+        GameTooltip:AddLine("Click to switch between single-target and AoE rotations", 1, 1, 1, true)
+        GameTooltip:Show()
+    end)
+    aoeButton:SetScript("OnLeave", function() GameTooltip:Hide() end)
+end
+
+function TR:FindKeybind(spellID)
+    local spellName = GetSpellInfo(spellID)
+    if not spellName then return "" end
+
+    for i = 1, 120 do
+        local actionType, id = GetActionInfo(i)
+        if actionType == "spell" then
+            local actionSpellName = GetSpellInfo(id)
+            if actionSpellName and actionSpellName == spellName then
+                local key = GetBindingKey("ACTIONBUTTON" .. i) or
+                           GetBindingKey("MULTIACTIONBAR1BUTTON" .. (i - 12)) or
+                           GetBindingKey("MULTIACTIONBAR2BUTTON" .. (i - 24))
+                if key then
+                    key = key:gsub("SHIFT%-", "S-")
+                    key = key:gsub("CTRL%-", "C-")
+                    key = key:gsub("ALT%-", "A-")
+                    return key
+                end
+            end
+        end
+    end
+    return ""
+end
+
+function TR:CheckSpecialConditions(spellID)
+    local hp = UnitHealth("player") or 0
+    local max = UnitHealthMax("player") or 1
+    if max > 0 and (hp / max) < 0.3 then
+        return {1, 0, 0, 1}
+    end
+
+    if UnitBuff and UnitBuff("player", "Clearcasting") then
+        return {0, 1, 0, 1}
+    end
+
+    return nil
+end
+
+function TR:UpdateResource()
+    if not (self.ResourceBar and self.ResourceText) then return end
+    local powerType = UnitPowerType("player")
+    local current = UnitPower("player", powerType)
+    local max = UnitPowerMax("player", powerType)
+
+    if not (current and max and max > 0) then return end
+
+    self.ResourceBar:SetMinMaxValues(0, max)
+    self.ResourceBar:SetValue(current)
+    self.ResourceText:SetText(floor(current / max * 100) .. "%")
+
+    local colors = {
+        [0] = {0.0, 0.0, 1.0},
+        [1] = {1.0, 0.0, 0.0},
+        [3] = {1.0, 1.0, 0.0},
+    }
+    local r, g, b = unpack(colors[powerType] or {1, 1, 1})
+    self.ResourceBar:SetStatusBarColor(r, g, b)
 end
 
 -- ===== SECONDARY ANCHOR LOGIC =====
@@ -225,19 +359,56 @@ end
 
 -- ===== PUBLIC API =====
 function TR.UI_Update(mainID, next1, next2)
-    -- Update ability icons
-    if TacoRotWindow and TacoRotWindow.icon then
-        TacoRotWindow.icon:SetTexture(SafeSpellTexture(mainID))
+    local icons = {
+        { frame = TacoRotWindow,  spell = mainID, index = 1 },
+        { frame = TacoRotWindow2, spell = next1, index = 2 },
+        { frame = TacoRotWindow3, spell = next2, index = 3 },
+    }
+
+    for _, data in ipairs(icons) do
+        local frame = data.frame
+        local spellID = data.spell
+        if frame and frame.icon then
+            frame.icon:SetTexture(SafeSpellTexture(spellID))
+        end
+        if frame and frame.keybind then
+            local keybind = TR:FindKeybind(spellID)
+            frame.keybind:SetText(keybind)
+        end
+        if frame and frame.cooldown then
+            local start, duration = GetSpellCooldown(spellID or 0)
+            if start and duration and duration > 0 then
+                frame.cooldown:SetCooldown(start, duration)
+                frame.cooldown:Show()
+            else
+                frame.cooldown:Hide()
+            end
+        end
+        if frame and frame.priority then
+            frame.priority:SetText(tostring(data.index))
+        end
+        if frame and frame.spellName then
+            if TR.db and TR.db.profile and TR.db.profile.showSpellNames and spellID then
+                local name = GetSpellInfo(spellID)
+                frame.spellName:SetText(name or "")
+                frame.spellName:Show()
+            else
+                frame.spellName:Hide()
+            end
+        end
+        if frame and frame.border then
+            local color = TR:CheckSpecialConditions(spellID)
+            if color then
+                frame.border:SetVertexColor(unpack(color))
+                frame.border:Show()
+            else
+                frame.border:Hide()
+            end
+        end
     end
-    if TacoRotWindow2 and TacoRotWindow2.icon then
-        TacoRotWindow2.icon:SetTexture(SafeSpellTexture(next1))
-    end
-    if TacoRotWindow3 and TacoRotWindow3.icon then
-        TacoRotWindow3.icon:SetTexture(SafeSpellTexture(next2))
-    end
-    
-    -- Update GCD cooldown (Blizzard-style)
+
     UpdateGCDCooldown()
+    TR:UpdateResource()
 end
 
 -- Adapter for newer engines
@@ -358,6 +529,8 @@ end
 local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("PLAYER_LOGIN")
 eventFrame:RegisterEvent("ADDON_LOADED")
+eventFrame:RegisterEvent("UNIT_POWER_FREQUENT")
+eventFrame:RegisterEvent("UNIT_DISPLAYPOWER")
 
 -- Update GCD cooldown when spells are cast
 local cooldownUpdateFrame = CreateFrame("Frame")
@@ -367,17 +540,22 @@ cooldownUpdateFrame:SetScript("OnEvent", function()
     UpdateGCDCooldown()
 end)
 
-eventFrame:SetScript("OnEvent", function(self, event, addonName)
+eventFrame:SetScript("OnEvent", function(self, event, arg1)
     if event == "PLAYER_LOGIN" then
+        SafeCall(CreateAllFrames)
         SafeCall(RestoreUI)
+        TR:UpdateResource()
         DEFAULT_CHAT_FRAME:AddMessage("|cff55ff55[TacoRot]|r Enhanced UI loaded with Blizzard GCD Cooldown")
-    elseif event == "ADDON_LOADED" and addonName == "TacoRot" then
-        -- Additional initialization if needed
-        if not TacoRotGCDCooldown and EnsureDB().UI.gcdSpiral.enabled then
+    elseif event == "ADDON_LOADED" and arg1 == "TacoRot" then
+        if not TacoRotGCDCooldown and EnsureDB().UI.gcdSpiral.enabled and TacoRotWindow then
             SafeCall(function()
                 TacoRotGCDCooldown = CreateGCDCooldown(TacoRotWindow)
                 RestoreUI()
             end)
+        end
+    elseif event == "UNIT_POWER_FREQUENT" or event == "UNIT_DISPLAYPOWER" then
+        if arg1 == "player" then
+            TR:UpdateResource()
         end
     end
 end)

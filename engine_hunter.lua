@@ -30,15 +30,18 @@ local function PetCfg() local p=TR and TR.db and TR.db.profile and TR.db.profile
 local function Known(id) return id and (IsPlayerSpell and IsPlayerSpell(id) or (IsSpellKnown and IsSpellKnown(id))) end
 local function ReadyNow(id) if not Known(id) then return false end local s,d,en=GetSpellCooldown(id); if en==0 then return false end return (not s or s==0 or d==0) end
 local function ReadySoon(id)
-  local pad = Pad()
-  if not pad.enabled then return ReadyNow(id) end
   if not Known(id) then return false end
-  local start, duration, enabled = GetSpellCooldown(id)
-  if enabled == 0 then return false end
-  if (not start or start == 0 or duration == 0) then return true end
-  local gcd = 1.5
-  local remaining = (start + duration) - GetTime()
-  return remaining <= (pad.gcd + gcd)
+  local pad = Pad()
+  if not pad.enabled then
+    return TR:IsAbilityReadySoon(id, 0)
+  end
+  return TR:IsAbilityReadySoon(id, pad.gcd)
+end
+
+local function SafeCheck(func, ...)
+  if type(func) ~= "function" then return false end
+  local ok, res = pcall(func, ...)
+  return ok and res
 end
 local function DebuffUpID(u, id) if not id then return false end local wanted=GetSpellInfo(id) for i=1,40 do local name,_,_,_,_,_,_,caster,_,_,sid=UnitDebuff(u,i); if not name then break end if sid==id or (name==wanted and caster=="player") then return true end end return false end
 local function BuffUpID(u, id) if not id then return false end local wanted=GetSpellInfo(id) for i=1,40 do local name=UnitBuff(u,i); if not name then break end if name==wanted then return true end end return false end
@@ -73,14 +76,14 @@ local function BuildPetQueue()
   local cfg = PetCfg(); if not (cfg.enabled ~= false) then return end
   local q = {}
   if (not HasPet()) and (cfg.summon ~= false) then
-    local call = CallPetID(); if call and ReadySoon(call) then Push(q, call); return q end
+    local call = CallPetID(); if call and SafeCheck(ReadySoon, call) then Push(q, call); return q end
   end
   if UnitExists("pet") and UnitIsDead("pet") and (cfg.revive ~= false) then
-    local revive = RevivePetID(); if revive and ReadySoon(revive) then Push(q, revive); return q end
+    local revive = RevivePetID(); if revive and SafeCheck(ReadySoon, revive) then Push(q, revive); return q end
   end
   if UnitExists("pet") and (cfg.mend ~= false) then
     local hp = UnitHealth("pet") or 0; local max = UnitHealthMax("pet") or 1
-    if max > 0 and (hp/max) < 0.60 then local mend = MendPetID(); if mend and ReadySoon(mend) then Push(q, mend); return q end end
+    if max > 0 and (hp/max) < 0.60 then local mend = MendPetID(); if mend and SafeCheck(ReadySoon, mend) then Push(q, mend); return q end end
   end
   return q
 end
@@ -107,41 +110,41 @@ local function BuildQueue()
   if HaveTarget() then
     -- Out of combat buffs/setup
     if not UnitAffectingCombat("player") then
-      if A and ReadySoon(A.HuntersMark) and not DebuffUpID("target", A.HuntersMark) then 
+      if A and SafeCheck(ReadySoon, A.HuntersMark) and not DebuffUpID("target", A.HuntersMark) then 
         Push(q, A.HuntersMark) 
       end
     end
 
     -- High priority abilities
-    if A and A.KillShot and ReadySoon(A.KillShot) then 
+    if A and A.KillShot and SafeCheck(ReadySoon, A.KillShot) then 
       Push(q, A.KillShot) 
     end
 
     if InMelee() then
       -- Melee range abilities
-      if A and ReadySoon(A.RaptorStrike) then 
+      if A and SafeCheck(ReadySoon, A.RaptorStrike) then 
         table.insert(q, 1, A.RaptorStrike) 
       end
-      if #q < 3 and A and ReadySoon(A.WingClip) then 
+      if #q < 3 and A and SafeCheck(ReadySoon, A.WingClip) then 
         Push(q, A.WingClip) 
       end
     else
       -- Ranged abilities
-      if A and ReadySoon(A.AimedShot) then 
+      if A and SafeCheck(ReadySoon, A.AimedShot) then 
         Push(q, A.AimedShot) 
       end
-      if A and ReadySoon(A.MultiShot) then 
+      if A and SafeCheck(ReadySoon, A.MultiShot) then 
         Push(q, A.MultiShot) 
       end
-      if A and ReadySoon(A.ArcaneShot) then 
+      if A and SafeCheck(ReadySoon, A.ArcaneShot) then 
         Push(q, A.ArcaneShot) 
       end
-      if A and ReadySoon(A.SteadyShot) then 
+      if A and SafeCheck(ReadySoon, A.SteadyShot) then 
         Push(q, A.SteadyShot) 
       end
 
       -- Serpent Sting if not already on target
-      if #q < 3 and A and A.SerpentSting and not DebuffUpID("target", A.SerpentSting) and ReadySoon(A.SerpentSting) then
+      if #q < 3 and A and A.SerpentSting and not DebuffUpID("target", A.SerpentSting) and SafeCheck(ReadySoon, A.SerpentSting) then
         Push(q, A.SerpentSting)
       end
     end -- end else (ranged)
@@ -181,10 +184,12 @@ function TR:EngineTick_Hunter()
   self._lastMainSpell = q[1]
   
   -- Use the correct UI update method
-  if TR.UI_Update then
-    TR.UI_Update(q[1], q[2], q[3])
-  elseif self.UI and self.UI.Update then 
-    self.UI:Update(q[1], q[2], q[3]) 
+  if TR:ShouldUpdateSuggestions(q) then
+    if TR.UI_Update then
+      TR.UI_Update(q[1], q[2], q[3])
+    elseif self.UI and self.UI.Update then
+      self.UI:Update(q[1], q[2], q[3])
+    end
   end
 end
 
