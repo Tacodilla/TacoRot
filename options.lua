@@ -154,6 +154,7 @@ end)
 function TR:RebuildOptions() BuildClassOptions() end
 
 -- ================= Enhanced Options Structure =================
+
 local function GetKeybindOptions(displayName)
   return {
     keybinds = {
@@ -334,4 +335,8 @@ local function GetEnhancedOptions()
 end
 
 TR.GetEnhancedOptions = GetEnhancedOptions
+
+  return options
+end
+
 

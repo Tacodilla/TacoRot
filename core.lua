@@ -39,6 +39,7 @@ local function GetEnhancedDefaults()
             outOfCombat = false,
             mounted = false,
           },
+
           keybinds = {
             enabled = true,
             lowercase = false,
@@ -46,6 +47,7 @@ local function GetEnhancedDefaults()
             fontSize = 12,
             fontStyle = "OUTLINE",
           },
+
         },
         Secondary = {
           enabled = false,
@@ -53,6 +55,7 @@ local function GetEnhancedDefaults()
           iconSize = 40,
           spacing = 5,
           position = { anchor = "CENTER", x = 0, y = 60 },
+
           keybinds = {
             enabled = true,
             lowercase = false,
@@ -410,7 +413,6 @@ function TR:ExitConfigMode()
 
   self:Print("Configuration mode disabled.")
 end
-
 function TR:SlashKeybinds(input)
   if input == "keybinds refresh" or input == "kb refresh" then
     if self.ReadKeybindings then self:ReadKeybindings() end
@@ -437,7 +439,6 @@ function TR:SlashKeybinds(input)
     return
   end
 end
-
 function TR:Slash(input)
   input = (input or ""):lower()
   if input:match("^keybind") or input:match("^kb") then
