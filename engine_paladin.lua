@@ -120,7 +120,7 @@ function TR:EngineTick_Paladin()
   elseif not UnitAffectingCombat("player") then
     q = BuildBuffQueue() or {}
     if not q[1] then
-      if HaveTarget() then q = BuildQueue() else local fb = Fallback(); q = {fb,fb,fb} end
+      q = BuildQueue() -- Always show rotation, regardless of target
     end
   else
     q = BuildQueue()
