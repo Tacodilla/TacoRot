@@ -7,26 +7,6 @@ if not TR then return end
 local Registry = LibStub("AceConfigRegistry-3.0", true)
 if not Registry then return end
 
-TR.OptionsRoot = TR.OptionsRoot or { args = {} }
-TR.OptionsRoot.args = TR.OptionsRoot.args or {}
-TR.OptionsRoot.args.spellNames = {
-  type = "toggle",
-  name = "Show Spell Names",
-  desc = "Display spell names above rotation icons",
-  order = 50,
-  set = function(info, val)
-    if TR.db and TR.db.profile then
-      TR.db.profile.showSpellNames = val and true or false
-    end
-    if TR.UpdateRotationDisplay then
-      TR:UpdateRotationDisplay()
-    end
-  end,
-  get = function()
-    return TR.db and TR.db.profile and TR.db.profile.showSpellNames
-  end,
-}
-
 local CLASS_CAPS = {
   WARRIOR="Warrior", PALADIN="Paladin", HUNTER="Hunter", ROGUE="Rogue",
   PRIEST="Priest", DEATHKNIGHT="Death Knight", SHAMAN="Shaman", MAGE="Mage",

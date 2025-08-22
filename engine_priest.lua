@@ -41,18 +41,15 @@ local function BuffCfg() local p=TR and TR.db and TR.db.profile and TR.db.profil
 local function Known(id) return id and (IsPlayerSpell and IsPlayerSpell(id) or (IsSpellKnown and IsSpellKnown(id))) end
 local function ReadyNow(id) if not Known(id) then return false end local s,d,en=GetSpellCooldown(id); if en==0 then return false end return (not s or s==0 or d==0) end
 local function ReadySoon(id)
-  if not Known(id) then return false end
   local pad = Pad()
-  if not pad.enabled then
-    return TR:IsAbilityReadySoon(id, 0)
-  end
-  return TR:IsAbilityReadySoon(id, pad.gcd)
-end
-
-local function SafeCheck(func, ...)
-  if type(func) ~= "function" then return false end
-  local ok, res = pcall(func, ...)
-  return ok and res
+  if not pad.enabled then return ReadyNow(id) end
+  if not Known(id) then return false end
+  local start, duration, enabled = GetSpellCooldown(id)
+  if enabled == 0 then return false end
+  if (not start or start == 0 or duration == 0) then return true end
+  local gcd = 1.5
+  local remaining = (start + duration) - GetTime()
+  return remaining <= (pad.gcd + gcd)
 end
 local function DebuffUpID(u, id) if not id then return false end local wanted=GetSpellInfo(id) for i=1,40 do local name,_,_,_,_,_,_,caster,_,_,sid=UnitDebuff(u,i); if not name then break end if sid==id or (name==wanted and caster=="player") then return true end end return false end
 local function BuffUpID(u, id) if not id then return false end local wanted=GetSpellInfo(id) for i=1,40 do local name=UnitBuff(u,i); if not name then break end if name==wanted then return true end end return false end
@@ -76,7 +73,7 @@ local function BuildBuffQueue()
   local cfg = BuffCfg(); if not (cfg.enabled ~= false and (cfg.innerFire ~= false)) then return end
   local q = {}
   local ifi = IFID()
-  if ifi and not BuffUpID("player", ifi) and SafeCheck(ReadySoon, ifi) then Push(q, ifi) end
+  if ifi and not BuffUpID("player", ifi) and ReadySoon(ifi) then Push(q, ifi) end
   return q
 end
 
@@ -85,12 +82,12 @@ end
 
 local function BuildQueue()
   local q = {}
-  if A.VampiricTouch and not DebuffUpID("target", A.VampiricTouch) and SafeCheck(ReadySoon, A.VampiricTouch) then Push(q, A.VampiricTouch) end
-  if A.DevouringPlague and not DebuffUpID("target", A.DevouringPlague) and SafeCheck(ReadySoon, A.DevouringPlague) then Push(q, A.DevouringPlague) end
-  if A.ShadowWordPain and not DebuffUpID("target", A.ShadowWordPain) and SafeCheck(ReadySoon, A.ShadowWordPain) then Push(q, A.ShadowWordPain) end
-  if SafeCheck(ReadySoon, A.MindBlast) then Push(q, A.MindBlast) end
-  if SafeCheck(ReadySoon, A.MindFlay) then Push(q, A.MindFlay) end
-  if SafeCheck(ReadySoon, A.ShadowWordDeath) then Push(q, A.ShadowWordDeath) end
+  if A.VampiricTouch and not DebuffUpID("target", A.VampiricTouch) and ReadySoon(A.VampiricTouch) then Push(q, A.VampiricTouch) end
+  if A.DevouringPlague and not DebuffUpID("target", A.DevouringPlague) and ReadySoon(A.DevouringPlague) then Push(q, A.DevouringPlague) end
+  if A.ShadowWordPain and not DebuffUpID("target", A.ShadowWordPain) and ReadySoon(A.ShadowWordPain) then Push(q, A.ShadowWordPain) end
+  if ReadySoon(A.MindBlast) then Push(q, A.MindBlast) end
+  if ReadySoon(A.MindFlay) then Push(q, A.MindFlay) end
+  if ReadySoon(A.ShadowWordDeath) then Push(q, A.ShadowWordDeath) end
   return q
 end
 
@@ -116,13 +113,7 @@ function TR:EngineTick_Priest()
 
   q = pad3(q or {}, Fallback())
   self._lastMainSpell = q[1]
-  if TR:ShouldUpdateSuggestions(q) then
-    if TR.UI_Update then
-      TR.UI_Update(q[1], q[2], q[3])
-    elseif self.UI and self.UI.Update then
-      self.UI:Update(q[1], q[2], q[3])
-    end
-  end
+  if self.UI and self.UI.Update then self.UI:Update(q[1], q[2], q[3]) end
 end
 
 -- start/stop

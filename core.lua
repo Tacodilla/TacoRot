@@ -10,44 +10,6 @@ local AceDBOptions    = LibStub("AceDBOptions-3.0")
 local TR = AceAddon:NewAddon("TacoRot", "AceConsole-3.0", "AceEvent-3.0", "AceTimer-3.0")
 _G.TacoRot = TR
 
-TR.LastSuggestions = TR.LastSuggestions or {}
-TR.SuggestionTimer = TR.SuggestionTimer or 0
-
-function TR:GetGCD()
-  local _, duration = GetSpellCooldown(61304)
-  return duration or 1.5
-end
-
-function TR:IsAbilityReadySoon(spellID, padding)
-  if not spellID then return false end
-  padding = padding or self:GetGCD()
-
-  local start, duration, enabled = GetSpellCooldown(spellID)
-  if not enabled or enabled == 0 then return false end
-
-  if not start or start == 0 then return true end
-  if not duration or duration == 0 then return true end
-
-  local remaining = (start + duration) - GetTime()
-  return remaining <= padding
-end
-
-function TR:ShouldUpdateSuggestions(newSuggestions)
-  if self.SuggestionTimer < GetTime() then
-    self.SuggestionTimer = GetTime() + 0.1
-    self.LastSuggestions = newSuggestions
-    return true
-  end
-
-  for i = 1, 3 do
-    if self.LastSuggestions[i] ~= newSuggestions[i] then
-      self.LastSuggestions = newSuggestions
-      return true
-    end
-  end
-  return false
-end
-
 -- ================= Defaults =================
 local defaults = {
   profile = {
@@ -56,7 +18,6 @@ local defaults = {
     iconSize    = 52,
     nextScale   = 0.82,
     castFlash   = true,
-    showSpellNames = false,
     aoe         = false,
     anchor      = {"CENTER", UIParent, "CENTER", -200, 120},
     spells      = {},

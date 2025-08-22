@@ -30,18 +30,15 @@ local function ReadyNow(id)
   return (not s or s==0 or d==0)
 end
 local function ReadySoon(id)
-  if not Known(id) then return false end
   local pad = Pad()
-  if not pad.enabled then
-    return TR:IsAbilityReadySoon(id, 0)
-  end
-  return TR:IsAbilityReadySoon(id, pad.gcd)
-end
-
-local function SafeCheck(func, ...)
-  if type(func) ~= "function" then return false end
-  local ok, res = pcall(func, ...)
-  return ok and res
+  if not pad.enabled then return ReadyNow(id) end
+  if not Known(id) then return false end
+  local start, duration, enabled = GetSpellCooldown(id)
+  if enabled == 0 then return false end
+  if (not start or start == 0 or duration == 0) then return true end
+  local gcd = 1.5
+  local remaining = (start + duration) - GetTime()
+  return remaining <= (pad.gcd + gcd)
 end
 local function BuffUpID(u, id) if not id then return false end local wanted=GetSpellInfo(id) for i=1,40 do local name=UnitBuff(u,i); if not name then break end if name==wanted then return true end end return false end
 local function DebuffUpID(u, id) if not id then return false end local wanted=GetSpellInfo(id) for i=1,40 do local name,_,_,_,_,_,_,caster,_,_,sid=UnitDebuff(u,i); if not name then break end if sid==id or (name==wanted and caster=="player") then return true end end return false end
@@ -78,10 +75,10 @@ local function BuildBuffQueue()
   local cfg = BuffCfg(); if not (cfg.enabled ~= false) then return end
   local q = {}
   if (cfg.armor ~= false) then
-    local armor = ArmorID(); if armor and not BuffUpID("player", armor) and SafeCheck(ReadySoon, armor) then Push(q, armor) end
+    local armor = ArmorID(); if armor and not BuffUpID("player", armor) and ReadySoon(armor) then Push(q, armor) end
   end
   if (cfg.intellect ~= false) then
-    local intel = IntellectID(); if intel and not BuffUpID("player", intel) and SafeCheck(ReadySoon, intel) then Push(q, intel) end
+    local intel = IntellectID(); if intel and not BuffUpID("player", intel) and ReadySoon(intel) then Push(q, intel) end
   end
   return q
 end
@@ -91,18 +88,18 @@ local function BuildQueue()
   local q = {}
   local tab = PrimaryTab()
   if tab == 1 then
-    if A and SafeCheck(ReadySoon, A.ArcaneMissiles) and BuffUpID("player", 44401) then Push(q, A.ArcaneMissiles) end
-    if A and SafeCheck(ReadySoon, A.ArcaneBlast) then Push(q, A.ArcaneBlast) end
-    if A and SafeCheck(ReadySoon, A.ArcaneBarrage) then Push(q, A.ArcaneBarrage) end
+    if A and ReadySoon(A.ArcaneMissiles) and BuffUpID("player", 44401) then Push(q, A.ArcaneMissiles) end
+    if A and ReadySoon(A.ArcaneBlast) then Push(q, A.ArcaneBlast) end
+    if A and ReadySoon(A.ArcaneBarrage) then Push(q, A.ArcaneBarrage) end
   elseif tab == 2 then
-    if A and SafeCheck(ReadySoon, A.Pyroblast) and BuffUpID("player", 48108) then Push(q, A.Pyroblast) end
-    if A and A.LivingBomb and not DebuffUpID("target", A.LivingBomb) and SafeCheck(ReadySoon, A.LivingBomb) then Push(q, A.LivingBomb) end
-    if A and SafeCheck(ReadySoon, A.Fireball) then Push(q, A.Fireball) end
-    if A and SafeCheck(ReadySoon, A.Scorch) then Push(q, A.Scorch) end
+    if A and ReadySoon(A.Pyroblast) and BuffUpID("player", 48108) then Push(q, A.Pyroblast) end
+    if A and A.LivingBomb and not DebuffUpID("target", A.LivingBomb) and ReadySoon(A.LivingBomb) then Push(q, A.LivingBomb) end
+    if A and ReadySoon(A.Fireball) then Push(q, A.Fireball) end
+    if A and ReadySoon(A.Scorch) then Push(q, A.Scorch) end
   else
-    if A and SafeCheck(ReadySoon, A.FrostfireBolt) and BuffUpID("player", 57761) then Push(q, A.FrostfireBolt) end
-    if A and SafeCheck(ReadySoon, A.IceLance) and BuffUpID("player", 44544) then Push(q, A.IceLance) end
-    if A and SafeCheck(ReadySoon, A.Frostbolt) then Push(q, A.Frostbolt) end
+    if A and ReadySoon(A.FrostfireBolt) and BuffUpID("player", 57761) then Push(q, A.FrostfireBolt) end
+    if A and ReadySoon(A.IceLance) and BuffUpID("player", 44544) then Push(q, A.IceLance) end
+    if A and ReadySoon(A.Frostbolt) then Push(q, A.Frostbolt) end
   end
   return pad3(q, SAFE)
 end
@@ -121,14 +118,7 @@ function TR:EngineTick_Mage()
     q = BuildQueue()
   end
 
-  self._lastMainSpell = q[1]
-  if TR:ShouldUpdateSuggestions(q) then
-    if TR.UI_Update then
-      TR.UI_Update(q[1], q[2], q[3])
-    elseif self.UI and self.UI.Update then
-      self.UI:Update(q[1], q[2], q[3])
-    end
-  end
+  self._lastMainSpell = q[1]; if self.UI and self.UI.Update then self.UI:Update(q[1], q[2], q[3]) end
 end
 
 function TR:StartEngine_Mage()

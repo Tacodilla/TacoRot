@@ -41,18 +41,15 @@ local function BuffCfg() local p=TR and TR.db and TR.db.profile and TR.db.profil
 local function Known(id) return id and (IsPlayerSpell and IsPlayerSpell(id) or (IsSpellKnown and IsSpellKnown(id))) end
 local function ReadyNow(id) if not Known(id) then return false end local s,d,en=GetSpellCooldown(id); if en==0 then return false end return (not s or s==0 or d==0) end
 local function ReadySoon(id)
-  if not Known(id) then return false end
   local pad = Pad()
-  if not pad.enabled then
-    return TR:IsAbilityReadySoon(id, 0)
-  end
-  return TR:IsAbilityReadySoon(id, pad.gcd)
-end
-
-local function SafeCheck(func, ...)
-  if type(func) ~= "function" then return false end
-  local ok, res = pcall(func, ...)
-  return ok and res
+  if not pad.enabled then return ReadyNow(id) end
+  if not Known(id) then return false end
+  local start, duration, enabled = GetSpellCooldown(id)
+  if enabled == 0 then return false end
+  if (not start or start == 0 or duration == 0) then return true end
+  local gcd = 1.5
+  local remaining = (start + duration) - GetTime()
+  return remaining <= (pad.gcd + gcd)
 end
 local function DebuffUpID(u, id) if not id then return false end local wanted=GetSpellInfo(id) for i=1,40 do local name,_,_,_,_,_,_,caster,_,_,sid=UnitDebuff(u,i); if not name then break end if sid==id or (name==wanted and caster=="player") then return true end end return false end
 local function BuffUpID(u, id) if not id then return false end local wanted=GetSpellInfo(id); if not wanted then return false end for i=1,40 do local name,_,_,_,_,_,_,_,_,_,sid=UnitBuff(u,i); if not name then break end if sid==id or name==wanted then return true end end return false end
@@ -86,7 +83,7 @@ local function BuildBuffQueue()
   local cfg = BuffCfg(); if not (cfg.enabled ~= false and (cfg.seal ~= false)) then return end
   local q = {}
   if not HaveSeal() then
-    if SafeCheck(ReadySoon, (A and A.SealOfRighteousness) or SOR) then Push(q, (A and A.SealOfRighteousness) or SOR) end
+    if ReadySoon((A and A.SealOfRighteousness) or SOR) then Push(q, (A and A.SealOfRighteousness) or SOR) end
   end
   return q
 end
@@ -102,11 +99,11 @@ local function BuildQueue()
   end
   
   -- standard Ret single-target
-  if A and (SafeCheck(ReadySoon, A.JudgementOfWisdom) or SafeCheck(ReadySoon, A.JudgementOfLight)) then Push(q, A.JudgementOfWisdom or A.JudgementOfLight) end
-  if A and SafeCheck(ReadySoon, A.CrusaderStrike) then Push(q, A.CrusaderStrike) end
-  if A and SafeCheck(ReadySoon, A.Exorcism) then Push(q, A.Exorcism) end
-  if A and SafeCheck(ReadySoon, A.Consecration) then Push(q, A.Consecration) end
-  if A and UnitHealth("target")>1 and (UnitHealth("target")/UnitHealthMax("target"))<=0.2 and SafeCheck(ReadySoon, A.HammerOfWrath) then Push(q, A.HammerOfWrath) end
+  if A and (ReadySoon(A.JudgementOfWisdom) or ReadySoon(A.JudgementOfLight)) then Push(q, A.JudgementOfWisdom or A.JudgementOfLight) end
+  if A and ReadySoon(A.CrusaderStrike) then Push(q, A.CrusaderStrike) end
+  if A and ReadySoon(A.Exorcism) then Push(q, A.Exorcism) end
+  if A and ReadySoon(A.Consecration) then Push(q, A.Consecration) end
+  if A and UnitHealth("target")>1 and (UnitHealth("target")/UnitHealthMax("target"))<=0.2 and ReadySoon(A.HammerOfWrath) then Push(q, A.HammerOfWrath) end
   return q
 end
 
@@ -133,12 +130,10 @@ function TR:EngineTick_Paladin()
   self._lastMainSpell = q[1]
   
   -- Fix UI update call
-  if TR:ShouldUpdateSuggestions(q) then
-    if TR.UI_Update then
-      TR.UI_Update(q[1], q[2], q[3])
-    elseif self.UI and self.UI.Update then
-      self.UI:Update(q[1], q[2], q[3])
-    end
+  if TR.UI_Update then
+    TR.UI_Update(q[1], q[2], q[3])
+  elseif self.UI and self.UI.Update then 
+    self.UI:Update(q[1], q[2], q[3]) 
   end
 end
 
