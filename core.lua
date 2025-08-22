@@ -10,23 +10,92 @@ local AceDBOptions    = LibStub("AceDBOptions-3.0")
 local TR = AceAddon:NewAddon("TacoRot", "AceConsole-3.0", "AceEvent-3.0", "AceTimer-3.0")
 _G.TacoRot = TR
 
--- ================= Defaults =================
-local defaults = {
-  profile = {
-    unlock      = true,
-    nextWindows = true,
-    iconSize    = 52,
-    nextScale   = 0.82,
-    castFlash   = true,
-    aoe         = false,
-    anchor      = {"CENTER", UIParent, "CENTER", -200, 120},
-    spells      = {},
-    -- Add missing config sections
-    pad         = {},
-    buff        = {},
-    pet         = {},
-  },
-}
+local function GetEnhancedDefaults()
+  local defaults = {
+    profile = {
+      unlock      = true,
+      nextWindows = true,
+      iconSize    = 52,
+      nextScale   = 0.82,
+      castFlash   = true,
+      aoe         = false,
+      anchor      = {"CENTER", UIParent, "CENTER", -200, 120},
+      spells      = {},
+      -- Add missing config sections
+      pad         = {},
+      buff        = {},
+      pet         = {},
+
+      -- New display system defaults
+      displays = {
+        Primary = {
+          enabled = true,
+          numIcons = 3,
+          iconSize = 50,
+          spacing = 5,
+          position = { anchor = "CENTER", x = 0, y = 0 },
+          visibility = {
+            combat = true,
+            outOfCombat = false,
+            mounted = false,
+          },
+        },
+        Secondary = {
+          enabled = false,
+          numIcons = 2,
+          iconSize = 40,
+          spacing = 5,
+          position = { anchor = "CENTER", x = 0, y = 60 },
+        },
+      },
+
+      -- Enhanced class-specific settings
+      classSettings = {
+        ROGUE = {
+          padding = { enabled = true, gcd = 1.6 },
+          buffs   = { enabled = true },
+          pets    = { enabled = false },
+        },
+        WARLOCK = {
+          padding = { enabled = true, gcd = 1.6 },
+          buffs   = { enabled = true },
+          pets    = { enabled = true },
+        },
+        HUNTER = {
+          padding = { enabled = true, gcd = 1.6 },
+          buffs   = { enabled = true },
+          pets    = { enabled = true },
+        },
+      },
+    },
+  }
+  return defaults
+end
+
+-- ================= Display System =================
+function TR:CreateAdditionalDisplays()
+  local displays = {"Primary", "Secondary", "Cooldowns", "Defensive", "AoE"}
+
+  for i, name in ipairs(displays) do
+    self.UI = self.UI or {}
+    self.UI.displays = self.UI.displays or {}
+    if not self.UI.displays[name] then
+      self.UI.displays[name] = {
+        enabled = (i == 1), -- Only Primary enabled by default
+        frame = nil,
+        buttons = {},
+        config = {
+          numIcons = (i == 1) and 3 or 2,
+          iconSize = 50,
+          spacing = 5,
+          anchor = "CENTER",
+          x = 0,
+          y = 0 + (i - 1) * 60,
+        },
+      }
+    end
+  end
+end
 
 -- ================= Options (root) =================
 local function RegisterOptions(self)
@@ -84,7 +153,7 @@ end
 
 -- ================= Lifecycle =================
 function TR:OnInitialize()
-  self.db = AceDB:New("TacoRotDB", defaults, true)
+  self.db = AceDB:New("TacoRotDB", GetEnhancedDefaults(), true)
   RegisterOptions(self)
   self:RegisterChatCommand("tacorot", "Slash")
   self:RegisterChatCommand("tr", "Slash")
@@ -97,6 +166,11 @@ function TR:OnInitialize()
   if self.UI and self.UI.Init then
     self.UI:Init()
     if self.UI.ApplySettings then self.UI:ApplySettings() end
+  end
+
+  -- Initialize additional displays
+  if self.CreateAdditionalDisplays then
+    self:CreateAdditionalDisplays()
   end
 end
 
@@ -264,6 +338,47 @@ function TR:UpdateVisibility()
       TacoRotWindow3:Hide() 
     end
   end
+end
+
+function TR:EnterConfigMode()
+  self.configMode = true
+
+  for name, display in pairs(self.UI and self.UI.displays or {}) do
+    if display.frame and display.frame.backdrop then
+      display.frame.backdrop:Show()
+      display.frame:EnableMouse(true)
+      display.frame:SetMovable(true)
+      display.frame:RegisterForDrag("LeftButton")
+      display.frame:SetScript("OnDragStart", function(frame)
+        frame:StartMoving()
+      end)
+      display.frame:SetScript("OnDragStop", function(frame)
+        frame:StopMovingOrSizing()
+        local point, _, _, x, y = frame:GetPoint()
+        self.db.profile.displays = self.db.profile.displays or {}
+        self.db.profile.displays[name] = self.db.profile.displays[name] or {}
+        self.db.profile.displays[name].position = { anchor = point, x = x, y = y }
+      end)
+    end
+  end
+
+  self:Print("Configuration mode enabled. Drag frames to reposition.")
+end
+
+function TR:ExitConfigMode()
+  self.configMode = false
+
+  for _, display in pairs(self.UI and self.UI.displays or {}) do
+    if display.frame then
+      if display.frame.backdrop then display.frame.backdrop:Hide() end
+      display.frame:EnableMouse(false)
+      display.frame:SetMovable(false)
+      display.frame:SetScript("OnDragStart", nil)
+      display.frame:SetScript("OnDragStop", nil)
+    end
+  end
+
+  self:Print("Configuration mode disabled.")
 end
 
 function TR:Slash(input)

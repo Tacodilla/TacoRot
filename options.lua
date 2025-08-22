@@ -152,3 +152,99 @@ local f = CreateFrame("Frame"); f:RegisterEvent("PLAYER_LOGIN"); f:SetScript("On
   BuildClassOptions()
 end)
 function TR:RebuildOptions() BuildClassOptions() end
+
+-- ================= Enhanced Options Structure =================
+local function GetEnhancedOptions()
+  local options = {
+    type = "group",
+    name = "TacoRot",
+    args = {
+      general = {
+        type = "group",
+        name = "General",
+        order = 1,
+        args = {
+          enabled = {
+            type = "toggle",
+            name = "Enable TacoRot",
+            desc = "Enable or disable the addon",
+            get = function() return TR.db.profile.enabled end,
+            set = function(_, val) TR.db.profile.enabled = val end,
+            order = 1,
+          },
+          configMode = {
+            type = "execute",
+            name = "Toggle Configuration Mode",
+            desc = "Enable dragging and repositioning of displays",
+            func = function()
+              if TR.configMode then
+                TR:ExitConfigMode()
+              else
+                TR:EnterConfigMode()
+              end
+            end,
+            order = 2,
+          },
+        },
+      },
+
+      displays = {
+        type = "group",
+        name = "Displays",
+        order = 2,
+        args = {
+          primary = {
+            type = "group",
+            name = "Primary Display",
+            order = 1,
+            args = {
+              enabled = {
+                type = "toggle",
+                name = "Enabled",
+                get = function() return TR.db.profile.displays.Primary.enabled end,
+                set = function(_, val)
+                  TR.db.profile.displays.Primary.enabled = val
+                  if TR.UpdateDisplayVisibility then TR:UpdateDisplayVisibility() end
+                end,
+              },
+              numIcons = {
+                type = "range",
+                name = "Number of Icons",
+                min = 1,
+                max = 5,
+                step = 1,
+                get = function() return TR.db.profile.displays.Primary.numIcons end,
+                set = function(_, val)
+                  TR.db.profile.displays.Primary.numIcons = val
+                  if TR.RefreshDisplay then TR:RefreshDisplay("Primary") end
+                end,
+              },
+              iconSize = {
+                type = "range",
+                name = "Icon Size",
+                min = 20,
+                max = 100,
+                step = 5,
+                get = function() return TR.db.profile.displays.Primary.iconSize end,
+                set = function(_, val)
+                  TR.db.profile.displays.Primary.iconSize = val
+                  if TR.RefreshDisplay then TR:RefreshDisplay("Primary") end
+                end,
+              },
+            },
+          },
+        },
+      },
+
+      classes = {
+        type = "group",
+        name = "Class Settings",
+        order = 3,
+        args = {},
+      },
+    },
+  }
+
+  return options
+end
+
