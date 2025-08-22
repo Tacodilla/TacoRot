@@ -155,9 +155,6 @@ end
 TacoRotWindow = TacoRotWindow or SafeCall(CreateIconFrame, "TacoRotWindow", UIParent, 52, -90, 0)
 TacoRotWindow2 = TacoRotWindow2 or SafeCall(CreateIconFrame, "TacoRotWindow2", UIParent, 40, -40, 0)
 TacoRotWindow3 = TacoRotWindow3 or SafeCall(CreateIconFrame, "TacoRotWindow3", UIParent, 32, 0, 0)
-TacoRot.RegisterDisplayFrame(TacoRotWindow, "Main-Hand")
-TacoRot.RegisterDisplayFrame(TacoRotWindow2, "Off-Hand")
-TacoRot.RegisterDisplayFrame(TacoRotWindow3, "Ranged")
 
 -- Create GCD Cooldown using Blizzard's system
 TacoRotGCDCooldown = nil
@@ -258,12 +255,6 @@ function TR:SetMainCastFlash(on)
     else
         TacoRotWindow.highlight:Hide()
     end
-end
-
-function TacoRot.RefreshHotkeys(getBindingFor)
-  -- Example: set text on your icon overlays
-  -- local key = getBindingFor("ACTIONBUTTON1")
-  -- TR_UI_SUGGEST1.Hotkey:SetText(key and GetBindingText(key, "KEY_", 1) or "")
 end
 
 -- ===== GCD COOLDOWN CONFIGURATION API =====
@@ -390,7 +381,3 @@ eventFrame:SetScript("OnEvent", function(self, event, addonName)
         end
     end
 end)
-function TacoRot.OnCastSucceeded(lineID, spellID)
-  -- nudge your prediction queue here
-end
-
