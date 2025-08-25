@@ -18,7 +18,8 @@ local function ResolveIDS()
 end
 
 local IDS = ResolveIDS() or {}; local A = IDS.Ability
-local SAFE = 585
+-- SAFE fallback constant (should be at top of each engine file)
+local SAFE = 6603  -- Attack spell ID - universally available
 
 -- talent/spec
 local function PrimaryTab()
@@ -112,8 +113,18 @@ function TR:EngineTick_Priest()
   end
 
   q = pad3(q or {}, Fallback())
+  -- DEBUG: Add this TEMPORARILY to troubleshoot (remove after fixing)
+  if not q or not q[1] then
+    DEFAULT_CHAT_FRAME:AddMessage("|cff55ff55[TacoRot DEBUG]|r Empty queue for " .. (UnitClass("player") or "Unknown"))
+    DEFAULT_CHAT_FRAME:AddMessage("|cff55ff55[TacoRot DEBUG]|r A table: " .. tostring(A and next(A) and "has spells" or "empty/nil"))
+  end
   self._lastMainSpell = q[1]
-  if self.UI and self.UI.Update then self.UI:Update(q[1], q[2], q[3]) end
+  -- Standardized UI update call
+  if TR.UI_Update then
+    TR.UI_Update(q[1], q[2], q[3])
+  elseif self.UI and self.UI.Update then
+    self.UI:Update(q[1], q[2], q[3])
+  end
 end
 
 -- start/stop

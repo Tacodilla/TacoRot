@@ -30,9 +30,25 @@ TR_RG.Rank = {
 
 local function HighestKnown(list)
   if not list then return nil end
+  
+  -- First pass: find the highest rank that is currently known
   for i = #list, 1, -1 do
-    if IsSpellKnown and IsSpellKnown(list[i]) then return list[i] end
+    local id = list[i]
+    if IsSpellKnown and IsSpellKnown(id) then
+      return id
+    end
   end
+  
+  -- Second pass: if nothing is known, find the highest rank that exists in spellbook
+  for i = #list, 1, -1 do
+    local id = list[i]
+    if GetSpellInfo and GetSpellInfo(id) then
+      return id
+    end
+  end
+  
+  -- Final fallback: return the lowest rank (most likely to be available at low levels)
+  return list[1]
 end
 
 function TR_RG:UpdateRanks()

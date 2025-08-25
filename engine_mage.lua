@@ -13,7 +13,8 @@ local function ResolveIDS()
   return nil
 end
 local IDS = ResolveIDS() or {}; local A = IDS.Ability
-local SAFE = 133 -- Fireball
+-- SAFE fallback constant (should be at top of each engine file)
+local SAFE = 6603  -- Attack spell ID - universally available
 
 local function PrimaryTab() local n=(GetNumTalentTabs and GetNumTalentTabs()) or 3; local b,p=1,-1; for i=1,n do local _,_,pt=GetTalentTabInfo(i); pt=pt or 0; if pt>p then b,p=i,pt end end return b end
 local function SpecName() local tab=PrimaryTab(); if tab==1 then return "Arcane" elseif tab==2 then return "Fire" else return "Frost" end end
@@ -45,6 +46,11 @@ local function DebuffUpID(u, id) if not id then return false end local wanted=Ge
 local function Push(q,id) if id then q[#q+1]=id end end
 local function pad3(q, fb) q[1]=q[1] or fb; q[2]=q[2] or q[1]; q[3]=q[3] or q[2]; return q end
 local function HaveTarget() return UnitExists("target") and not UnitIsDead("target") end
+
+-- Fallback safe
+local function Fallback()
+  return SAFE
+end
 
 -- Armor choice
 local function ArmorID()
@@ -110,7 +116,8 @@ function TR:EngineTick_Mage()
 
   local q
   if not A or not next(A) then
-    q = {SAFE,SAFE,SAFE}
+    local fb = Fallback()
+    q = {fb,fb,fb}
   elseif not UnitAffectingCombat("player") then
     q = BuildBuffQueue() or BuildQueue()
     if not (q and q[1]) then q = BuildQueue() end
@@ -118,7 +125,20 @@ function TR:EngineTick_Mage()
     q = BuildQueue()
   end
 
-  self._lastMainSpell = q[1]; if self.UI and self.UI.Update then self.UI:Update(q[1], q[2], q[3]) end
+  q = pad3(q or {}, Fallback())
+  -- DEBUG: Add this TEMPORARILY to troubleshoot (remove after fixing)
+  if not q or not q[1] then
+    DEFAULT_CHAT_FRAME:AddMessage("|cff55ff55[TacoRot DEBUG]|r Empty queue for " .. (UnitClass("player") or "Unknown"))
+    DEFAULT_CHAT_FRAME:AddMessage("|cff55ff55[TacoRot DEBUG]|r A table: " .. tostring(A and next(A) and "has spells" or "empty/nil"))
+  end
+  self._lastMainSpell = q[1]
+
+  -- Standardized UI update call
+  if TR.UI_Update then
+    TR.UI_Update(q[1], q[2], q[3])
+  elseif self.UI and self.UI.Update then
+    self.UI:Update(q[1], q[2], q[3])
+  end
 end
 
 function TR:StartEngine_Mage()
