@@ -1,8 +1,4 @@
 -- engine_warrior.lua — TacoRot Warrior (3.3.5)
--- Fixes:
--- 1) Overpower only when actually usable (proc/dodge).
--- 2) Rend smart-refresh (don’t reapply if your Rend has >3s left).
--- 3) Heroic Strike appears when rage is high and not already queued.
 
 local TR = _G.TacoRot
 if not TR then return end
@@ -29,10 +25,7 @@ local function PrimaryTab()
   for i=1,n do local _,_,p = GetTalentTabInfo(i); p=p or 0; if p>pts then best,pts=i,p end end
   return best
 end
-local function SpecName()
-  local tab = PrimaryTab()
-  if tab==1 then return "Arms" elseif tab==2 then return "Fury" else return "Protection" end
-end
+local function SpecName() local t=PrimaryTab(); return (t==1 and "Arms") or (t==2 and "Fury") or "Protection" end
 
 -- config
 local TOKEN = "WARRIOR"
@@ -41,39 +34,37 @@ local function BuffCfg() local p=TR and TR.db and TR.db.profile and TR.db.profil
 
 -- utils
 local function Known(id) return id and (IsPlayerSpell and IsPlayerSpell(id) or (IsSpellKnown and IsSpellKnown(id))) end
-
-local function ReadyNow(id)
-  if not Known(id) then return false end
-  local s,d,en = GetSpellCooldown(id)
-  if en == 0 then return false end
-  return (not s or s==0 or d==0)
-end
-
+local function ReadyNow(id) if not Known(id) then return false end local s,d,en=GetSpellCooldown(id); if en==0 then return false end return (not s or s==0 or d==0) end
 local function ReadySoon(id)
   local pad = Pad()
   if not pad.enabled then return ReadyNow(id) end
   if not Known(id) then return false end
-  local start, duration, enabled = GetSpellCooldown(id)
-  if enabled == 0 then return false end
-  if (not start or start == 0 or duration == 0) then return true end
-  local gcd = 1.5
-  local remaining = (start + duration) - GetTime()
+  local start,duration,enabled=GetSpellCooldown(id)
+  if enabled==0 then return false end
+  if (not start or start==0 or duration==0) then return true end
+  local gcd=1.5; local remaining=(start+duration)-GetTime()
   return remaining <= (pad.gcd + gcd)
 end
 
--- debuff/buff check with remaining time
+-- 3.3.5 UnitDebuff order: name, rank, icon, count, debuffType, duration, expirationTime, unitCaster, isStealable, _, spellId
 local function DebuffInfoByID(u, id)
-  if not id then return nil end
+  if not id then return false, 0 end
   local wanted = GetSpellInfo(id)
   for i=1,40 do
-    local name, _, _, _, _, expTime, _, caster, _, _, sid = UnitDebuff(u, i)
+    local name, _, _, _, _, duration, expirationTime, caster, _, _, sid = UnitDebuff(u, i)
     if not name then break end
-    if (sid == id or (wanted and name == wanted)) and (caster == "player") then
-      local remaining = (expTime and expTime > 0) and (expTime - GetTime()) or 0
-      return true, remaining
+    if (sid==id or (wanted and name==wanted)) and caster=="player" then
+      local remaining = (expirationTime and expirationTime>0) and (expirationTime-GetTime()) or 0
+      return true, remaining, duration or 0
     end
   end
-  return false, 0
+  return false, 0, 0
+end
+
+-- Simple boolean “up?” helper to mirror your Warlock pattern
+local function DebuffUpID(u, id)
+  local up = DebuffInfoByID(u, id)
+  return up == true
 end
 
 local function BuffUpID(u, id)
@@ -82,7 +73,7 @@ local function BuffUpID(u, id)
   for i=1,40 do
     local name, _, _, _, _, _, _, caster, _, _, sid = UnitBuff(u, i)
     if not name then break end
-    if sid == id or name == wanted then return true end
+    if sid==id or name==wanted then return true end
   end
   return false
 end
@@ -93,17 +84,9 @@ local function pad3(q, fb) q[1]=q[1] or fb; q[2]=q[2] or q[1]; q[3]=q[3] or q[2]
 local function Push(q,id) if id then q[#q+1]=id end end
 local function Rage() return UnitPower("player",1) or 0 end
 
--- auto attack state (melee “Attack” toggled)
-local function IsAutoAttackOn()
-  return IsCurrentSpell and IsCurrentSpell(6603)
-end
-
--- usability (e.g., Overpower only when proc/dodge makes it usable)
-local function IsUsable(id)
-  if not id or not Known(id) then return false end
-  local usable = IsUsableSpell and select(1, IsUsableSpell(id))
-  return usable == true or usable == 1
-end
+-- melee attack toggled?
+local function IsAutoAttackOn() return IsCurrentSpell and IsCurrentSpell(6603) end
+local function IsUsable(id) if not id or not Known(id) then return false end local u = IsUsableSpell and select(1, IsUsableSpell(id)); return u==true or u==1 end
 
 -- OOC buff maintenance
 local function BuildBuffQueue()
@@ -113,36 +96,34 @@ local function BuildBuffQueue()
   return q
 end
 
--- core priorities
-local REND_REFRESH_THRESHOLD = 3.0 -- seconds left before we suggest reapplying Rend
+-- Core (build WITHOUT HS; we overlay HS later)
+local REND_REFRESH_THRESHOLD = 3.0
 
 local function BuildQueue()
   local q = {}
-  local tree = PrimaryTab() -- 1 Arms, 2 Fury (3 Prot -> treat like Fury here)
+  local tree = PrimaryTab() -- 1 Arms, 2 Fury/3 Prot
 
-  -- Start/maintain auto-attack if in melee and not swinging
+  -- start auto-attack if in melee
   if InMelee() and not IsAutoAttackOn() then
-    table.insert(q, 1, 6603) -- Attack
+    table.insert(q, 1, 6603)
   end
 
   if tree == 1 then
     -- ARMS
-    -- Smart Rend: only if missing or about to fall off
     if A and A.Rend and ReadySoon(A.Rend) and HaveTarget() then
+      -- Your warlock-style check, plus smart refresh
       local up, remaining = DebuffInfoByID("target", A.Rend)
       if (not up) or remaining <= REND_REFRESH_THRESHOLD then
         Push(q, A.Rend)
       end
     end
 
-    -- Overpower only if actually usable (proc/dodge/TfB window)
     if A and A.Overpower and IsUsable(A.Overpower) and ReadyNow(A.Overpower) then
       Push(q, A.Overpower)
     end
 
     if A and ReadySoon(A.MortalStrike) then Push(q, A.MortalStrike) end
 
-    -- Execute phase
     if A and UnitHealth("target")>1 and (UnitHealth("target")/UnitHealthMax("target"))<=0.2 and ReadySoon(A.Execute) then
       Push(q, A.Execute)
     end
@@ -150,7 +131,7 @@ local function BuildQueue()
     if A and ReadySoon(A.Slam) then Push(q, A.Slam) end
 
   else
-    -- FURY / fallback
+    -- FURY/PROT (simple)
     if A and ReadySoon(A.Bloodthirst) then Push(q, A.Bloodthirst) end
     if A and ReadySoon(A.Whirlwind) then Push(q, A.Whirlwind) end
     if A and ReadySoon(A.Slam) then Push(q, A.Slam) end
@@ -159,13 +140,12 @@ local function BuildQueue()
     end
   end
 
-  -- Heroic Strike as an on-next-swing dump: show when rage is high and not already queued
-  if A and A.HeroicStrike and Rage() >= 60 and IsUsable(A.HeroicStrike) and not (IsCurrentSpell and IsCurrentSpell(A.HeroicStrike)) then
-    -- Put HS early so it’s visible; it won’t block GCD spells in practice since HS is on-next-swing.
-    table.insert(q, 1, A.HeroicStrike)
-  end
-
   return q
+end
+
+-- HS overlay logic (no duplicates)
+local function ShouldQueueHS()
+  return A and A.HeroicStrike and Rage() >= 60 and IsUsable(A.HeroicStrike) and not (IsCurrentSpell and IsCurrentSpell(A.HeroicStrike))
 end
 
 -- tick
@@ -176,15 +156,17 @@ function TR:EngineTick_Warrior()
 
   local q
   if not A or not next(A) then
-    local fb = SAFE
-    q = {fb,fb,fb}
+    q = {SAFE,SAFE,SAFE}
   elseif not UnitAffectingCombat("player") then
     q = BuildBuffQueue() or {}
-    if not q[1] then
-      q = BuildQueue() -- show rotation OOC too
-    end
+    if not q[1] then q = BuildQueue() end
   else
     q = BuildQueue()
+  end
+
+  -- Overlay HS only in slot 1 (don’t push into queue to avoid duplicates)
+  if ShouldQueueHS() then
+    q[1] = A.HeroicStrike
   end
 
   q = pad3(q or {}, SAFE)
@@ -197,7 +179,6 @@ function TR:EngineTick_Warrior()
   end
 end
 
--- start/stop
 function TR:StartEngine_Warrior()
   self:StopEngine_Warrior()
   self:EngineTick_Warrior()
