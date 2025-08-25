@@ -25,16 +25,25 @@ IDS.Rank = {
 
 local function bestRank(list)
   if not list then return nil end
-  local lastKnown
+
+  -- First pass: find the highest rank that is currently known
   for i = #list, 1, -1 do
     local id = list[i]
     if IsSpellKnown and IsSpellKnown(id) then
       return id
     end
-    lastKnown = id
   end
-  -- If nothing known yet (low level), keep highest for texture resolution.
-  return lastKnown
+
+  -- Second pass: if nothing is known, find the highest rank that exists in spellbook
+  for i = #list, 1, -1 do
+    local id = list[i]
+    if GetSpellInfo and GetSpellInfo(id) then
+      return id
+    end
+  end
+
+  -- Final fallback: return the lowest rank (most likely to be available at low levels)
+  return list[1]
 end
 
 function IDS:UpdateRanks()
