@@ -25,11 +25,57 @@ DR.Ability = {
   BearForm      = 5487,
 }
 
--- (Optional) stub if the core calls UpdateRanks; safe no-op
+DR.Rank = {
+  -- Balance
+  Wrath         = {5176, 5177, 5178, 5179, 5180, 6780, 8905, 9912, 9913, 26984, 26985, 48459, 48461},
+  Moonfire      = {8921, 8924, 8925, 8926, 8927, 8928, 8929, 9833, 9834, 9835, 26987, 26988, 48462, 48463},
+  Starfire      = {2912, 8949, 8950, 8951, 9875, 9876, 25298, 26986, 48464, 48465},
+  InsectSwarm   = {5570, 24974, 24975, 24976, 24977, 27013, 48468, 48469},
+  Starfall      = {48505, 53199, 53200, 53201},
+  ForceOfNature = {33831},
+
+  -- Feral (Cat)
+  MangleCat     = {33876, 33982, 33983, 48565, 48566},
+  Shred         = {5221, 6800, 8992, 9829, 9830, 27001, 27002, 48571, 48572},
+  Rake          = {1822, 1823, 1824, 9904, 27003, 48573, 48574},
+  Rip           = {1079, 9492, 9493, 9752, 9894, 9896, 27008, 49799, 49800},
+  SavageRoar    = {52610},
+  FerociousBite = {22568, 22827, 22828, 22829, 31018, 24248, 48576, 48577},
+  TigersFury    = {5217, 6793, 9845, 9846, 50212, 50213},
+
+  -- Forms
+  CatForm       = {768},
+  BearForm      = {5487},
+}
+
+local function bestRank(list)
+  if not list then return nil end
+
+  -- First pass: find the highest rank that is currently known
+  for i = #list, 1, -1 do
+    local id = list[i]
+    if IsSpellKnown and IsSpellKnown(id) then
+      return id
+    end
+  end
+
+  -- Second pass: if nothing is known, find the highest rank that exists in spellbook
+  for i = #list, 1, -1 do
+    local id = list[i]
+    if GetSpellInfo and GetSpellInfo(id) then
+      return id
+    end
+  end
+
+  -- Final fallback: return the lowest rank
+  return list[1]
+end
+
 function DR.UpdateRanks(self)
-  -- If you ever want rank promotion like Hunter’s ids.UpdateSpellID(),
-  -- do it here. The engine currently gates by spell name (HasSpell)
-  -- so base IDs are sufficient.
+  for key, list in pairs(self.Rank) do
+    local id = bestRank(list)
+    if id then self.Ability[key] = id end
+  end
 end
 
 -- Export
