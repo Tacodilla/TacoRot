@@ -18,7 +18,7 @@ local function ResolveIDS()
 end
 
 local IDS = ResolveIDS() or {}; local A = IDS.Ability
-local SAFE = 1752
+local SAFE = 6603  -- Attack spell ID - universally available
 
 -- Spec name
 local function PrimaryTab() local n=(GetNumTalentTabs and GetNumTalentTabs()) or 3; local b,p=1,-1; for i=1,n do local _,_,pt=GetTalentTabInfo(i); pt=pt or 0; if pt>p then b,p=i,pt end end return b end

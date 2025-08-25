@@ -21,6 +21,10 @@ local IDS = ResolveIDS() or {}; local A = IDS.Ability
 -- SAFE fallback constant (should be at top of each engine file)
 local SAFE = 6603  -- Attack spell ID - universally available
 
+local function Fallback()
+  return SAFE
+end
+
 -- talent/spec
 local function PrimaryTab()
   local n = (GetNumTalentTabs and GetNumTalentTabs()) or 3
@@ -57,11 +61,6 @@ local function BuffUpID(u, id) if not id then return false end local wanted=GetS
 local function HaveTarget() return UnitExists("target") and not UnitIsDead("target") end
 local function pad3(q, fb) q[1]=q[1] or fb; q[2]=q[2] or q[1]; q[3]=q[3] or q[2]; return q end
 local function Push(q,id) if id then q[#q+1]=id end end
-
--- Fallback safe
-local function Fallback()
-  return SAFE
-end
 
 -- OOC Buff maintenance (per class)
 
