@@ -1,6 +1,5 @@
 -- warrior_ids.lua — TacoRot Warrior IDs (3.3.5)
--- Structure mirrors existing Hunter/Rogue/Warlock/Druid tables.
--- Uses rank promotion at load, plus fallback icons so you never see ???
+-- Mirrors your existing class tables. Rank-promotion at load + icon fallbacks.
 
 local IDS = {}
 IDS.Ability = {
@@ -45,7 +44,7 @@ local function bestRank(list)
     end
     lastKnown = id
   end
-  -- If nothing known yet (low level), keep highest for texture resolution.
+  -- If nothing known yet (low level), keep highest for texture.
   return lastKnown
 end
 
@@ -63,16 +62,16 @@ _G.TacoRotIconFallbacks = _G.TacoRotIconFallbacks or {}
 local fb = _G.TacoRotIconFallbacks
 local function setOnce(id, tex) if id and not fb[id] then fb[id] = tex end end
 
-setOnce(6673, "Interface\Icons\Ability_Warrior_BattleShout")
-setOnce(12294, "Interface\Icons\Ability_Warrior_SavageBlow")
-setOnce(772, "Interface\Icons\Ability_Gouge")
-setOnce(7384, "Interface\Icons\Ability_MeleeDamage")
-setOnce(1464, "Interface\Icons\Ability_Warrior_DecisiveStrike")
-setOnce(5308, "Interface\Icons\INV_Sword_48")
-setOnce(46924, "Interface\Icons\Ability_Warrior_Bladestorm")
-setOnce(12328, "Interface\Icons\Ability_Rogue_SliceDice")
-setOnce(23881, "Interface\Icons\Spell_Nature_BloodLust")
-setOnce(1680, "Interface\Icons\Ability_Whirlwind")
-setOnce(78, "Interface\Icons\Ability_Rogue_Ambush")
-setOnce(18499, "Interface\Icons\Spell_Nature_AncestralGuardian")
-setOnce(20252, "Interface\Icons\Ability_Rogue_Sprint")
+setOnce(6673, "Interface\\Icons\\Ability_Warrior_BattleShout")
+setOnce(12294, "Interface\\Icons\\Ability_Warrior_SavageBlow")
+setOnce(772,   "Interface\\Icons\\Ability_Gouge")
+setOnce(7384,  "Interface\\Icons\\Ability_MeleeDamage")
+setOnce(1464,  "Interface\\Icons\\Ability_Warrior_DecisiveStrike")
+setOnce(5308,  "Interface\\Icons\\INV_Sword_48")
+setOnce(46924, "Interface\\Icons\\Ability_Warrior_Bladestorm")
+setOnce(12328, "Interface\\Icons\\Ability_Rogue_SliceDice")
+setOnce(23881, "Interface\\Icons\\Spell_Nature_BloodLust")
+setOnce(1680,  "Interface\\Icons\\Ability_Whirlwind")
+setOnce(78,    "Interface\\Icons\\Ability_Rogue_Ambush")
+setOnce(18499, "Interface\\Icons\\Spell_Nature_AncestralGuardian")
+setOnce(20252, "Interface\\Icons\\Ability_Rogue_Sprint")
