@@ -142,13 +142,26 @@ frame:RegisterEvent("PLAYER_LOGIN")
 frame:RegisterEvent("UPDATE_BINDINGS")
 frame:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
 
+-- 3.3.5 compatible timer function
+local function DelayedCall(delay, func)
+  local frame = CreateFrame("Frame")
+  local elapsed = 0
+  frame:SetScript("OnUpdate", function(self, dt)
+    elapsed = elapsed + dt
+    if elapsed >= delay then
+      frame:SetScript("OnUpdate", nil)
+      func()
+    end
+  end)
+end
+
 frame:SetScript("OnEvent", function(self, event, ...)
   if event == "ADDON_LOADED" and (...) == "TacoRot" then
-    C_Timer.After(1, ReadKeybindings)
+    DelayedCall(1, ReadKeybindings)
   elseif event == "PLAYER_LOGIN" then
-    C_Timer.After(2, ReadKeybindings)
+    DelayedCall(2, ReadKeybindings)
   elseif event == "UPDATE_BINDINGS" or event == "ACTIONBAR_SLOT_CHANGED" then
-    C_Timer.After(0.1, ReadKeybindings)
+    DelayedCall(0.1, ReadKeybindings)
   end
 end)
 
