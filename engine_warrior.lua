@@ -1,4 +1,9 @@
 -- engine_warrior.lua — TacoRot Warrior (3.3.5)
+-- Fixes:
+--  • Correct UnitDebuff parsing (expirationTime).
+--  • Rend smart-refresh (≤3s) + supports your simple DebuffUpID pattern.
+--  • Victory Rush recommended on proc and not masked by HS overlay.
+--  • Heroic Strike appears once as an overlay (no triplicates), never over VR.
 
 local TR = _G.TacoRot
 if not TR then return end
@@ -61,7 +66,7 @@ local function DebuffInfoByID(u, id)
   return false, 0, 0
 end
 
--- Simple boolean “up?” helper to mirror your Warlock pattern
+-- simple boolean “up?” helper to mirror your Warlock pattern
 local function DebuffUpID(u, id)
   local up = DebuffInfoByID(u, id)
   return up == true
@@ -108,22 +113,29 @@ local function BuildQueue()
     table.insert(q, 1, 6603)
   end
 
+  -- Victory Rush: show immediately when proc makes it usable (both specs)
+  if A and A.VictoryRush and IsUsable(A.VictoryRush) and ReadyNow(A.VictoryRush) and InMelee() then
+    table.insert(q, 1, A.VictoryRush)
+  end
+
   if tree == 1 then
     -- ARMS
+    -- Smart Rend (or your warlock-style check) only if missing or <= 3s remaining
     if A and A.Rend and ReadySoon(A.Rend) and HaveTarget() then
-      -- Your warlock-style check, plus smart refresh
       local up, remaining = DebuffInfoByID("target", A.Rend)
       if (not up) or remaining <= REND_REFRESH_THRESHOLD then
         Push(q, A.Rend)
       end
     end
 
+    -- Overpower only if actually usable (proc/dodge/TfB)
     if A and A.Overpower and IsUsable(A.Overpower) and ReadyNow(A.Overpower) then
       Push(q, A.Overpower)
     end
 
     if A and ReadySoon(A.MortalStrike) then Push(q, A.MortalStrike) end
 
+    -- Execute phase
     if A and UnitHealth("target")>1 and (UnitHealth("target")/UnitHealthMax("target"))<=0.2 and ReadySoon(A.Execute) then
       Push(q, A.Execute)
     end
@@ -143,7 +155,7 @@ local function BuildQueue()
   return q
 end
 
--- HS overlay logic (no duplicates)
+-- HS overlay logic (no duplicates; never over Victory Rush)
 local function ShouldQueueHS()
   return A and A.HeroicStrike and Rage() >= 60 and IsUsable(A.HeroicStrike) and not (IsCurrentSpell and IsCurrentSpell(A.HeroicStrike))
 end
@@ -164,8 +176,8 @@ function TR:EngineTick_Warrior()
     q = BuildQueue()
   end
 
-  -- Overlay HS only in slot 1 (don’t push into queue to avoid duplicates)
-  if ShouldQueueHS() then
+  -- Overlay HS only in slot 1, but never over Victory Rush
+  if ShouldQueueHS() and q[1] ~= (A and A.VictoryRush) then
     q[1] = A.HeroicStrike
   end
 
