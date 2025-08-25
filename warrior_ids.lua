@@ -16,6 +16,7 @@ IDS.Ability = {
   HeroicStrike     = 78,
   BerserkerRage    = 18499,
   Intercept        = 20252,
+  VictoryRush      = 34428,
 }
 
 IDS.Rank = {
@@ -32,6 +33,7 @@ IDS.Rank = {
   HeroicStrike     = {78, 284, 285, 1608, 11564, 11565, 11566, 11567, 25286, 29707},
   BerserkerRage    = {18499},
   Intercept        = {20252, 20616, 20617},
+  VictoryRush      = {34428},
 }
 
 local function bestRank(list)
@@ -62,7 +64,7 @@ _G.TacoRotIconFallbacks = _G.TacoRotIconFallbacks or {}
 local fb = _G.TacoRotIconFallbacks
 local function setOnce(id, tex) if id and not fb[id] then fb[id] = tex end end
 
-setOnce(6673, "Interface\\Icons\\Ability_Warrior_BattleShout")
+setOnce(6673,  "Interface\\Icons\\Ability_Warrior_BattleShout")
 setOnce(12294, "Interface\\Icons\\Ability_Warrior_SavageBlow")
 setOnce(772,   "Interface\\Icons\\Ability_Gouge")
 setOnce(7384,  "Interface\\Icons\\Ability_MeleeDamage")
@@ -75,3 +77,4 @@ setOnce(1680,  "Interface\\Icons\\Ability_Whirlwind")
 setOnce(78,    "Interface\\Icons\\Ability_Rogue_Ambush")
 setOnce(18499, "Interface\\Icons\\Spell_Nature_AncestralGuardian")
 setOnce(20252, "Interface\\Icons\\Ability_Rogue_Sprint")
+setOnce(34428, "Interface\\Icons\\Ability_Warrior_Devastate") -- Victory Rush
