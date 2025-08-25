@@ -142,6 +142,16 @@ local function BuildClassOptions()
     addClass("Hunter", "TacoRot_IDS_Hunter", "hunter", nil, { summon="Call Pet", revive="Revive Pet", mend="Mend Pet" })
   elseif token == "DRUID" then
     addClass("Druid", "TacoRot_IDS_Druid", "druid", { mark="Mark of the Wild", thorns="Thorns" }, nil)
+  elseif token == "PRIEST" then
+    addClass("Priest", "TacoRot_IDS_Priest", "priest", nil, nil)
+  elseif token == "PALADIN" then
+    addClass("Paladin", "TacoRot_IDS_Paladin", "paladin", nil, nil)
+  elseif token == "WARRIOR" then
+    addClass("Warrior", "TacoRot_IDS_Warrior", "warrior", nil, nil)
+  elseif token == "SHAMAN" then
+    addClass("Shaman", "TacoRot_IDS_Shaman", "shaman", nil, nil)
+  elseif token == "MAGE" then
+    addClass("Mage", "TacoRot_IDS_Mage", "mage", nil, nil)
   end
 
   Registry:NotifyChange("TacoRot")
