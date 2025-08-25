@@ -1,0 +1,22 @@
+## Interface: 30300
+## Title: TacoRot
+## Notes: Rotation helper for 3.3.5 (Epoch). Rogue+Warlock+Hunter, spec auto-detect, keybind overlays.
+## Author: Steven
+## Version: 1.9
+## SavedVariables: TacoRotDB
+
+embeds.xml
+Bindings.xml
+Compat-335.lua
+core.lua
+keybinds.lua
+ui_safe_override.lua
+ui.lua
+options.lua
+state.lua
+
+# Engines & IDs are included via XML to keep order clean
+engines.xml
+
+# Keep this dead last so it can sanity-check any engines that didnt attach
+engine_bootstrap.lua
