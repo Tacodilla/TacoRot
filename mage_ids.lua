@@ -14,6 +14,11 @@ IDS.Ability = {
   Frostbolt        = 116,
   IceLance         = 30455,
   FrostfireBolt    = 44614,
+  ArcaneExplosion  = 1449,
+  Flamestrike      = 2120,
+  BlastWave        = 11113,
+  ConeOfCold       = 120,
+  Blizzard         = 10,
 }
 
 IDS.Rank = {
@@ -27,6 +32,11 @@ IDS.Rank = {
   Frostbolt        = {116, 205, 837, 7322, 8406, 8407, 8408, 10179, 10180, 10181, 25304, 27071, 27072, 38697, 42841, 42842},
   IceLance         = {30455, 42913, 42914},
   FrostfireBolt    = {44614, 47610},
+  ArcaneExplosion  = {1449, 8437, 8438, 8439, 10201, 10202, 27080, 27082, 42920, 42921},
+  Flamestrike      = {2120, 2121, 8422, 8423, 10215, 10216, 27086, 27087, 42925, 42926},
+  BlastWave        = {11113, 13018, 13019, 13020, 13021, 27133, 33933, 42944, 42945},
+  ConeOfCold       = {120, 8492, 10159, 10160, 10161, 27087, 42930, 42931},
+  Blizzard         = {10, 6141, 8427, 10185, 10186, 10187, 27085, 42939, 42940},
 }
 
 local function bestRank(list)
@@ -76,3 +86,8 @@ setOnce(11366, "Interface\Icons\Spell_Fire_Fireball02")
 setOnce(116, "Interface\Icons\Spell_Frost_FrostBolt02")
 setOnce(30455, "Interface\Icons\Spell_Frost_FrostBolt")
 setOnce(44614, "Interface\Icons\Ability_Mage_FrostFireBolt")
+setOnce(1449, "Interface\Icons\Spell_Nature_WispSplode")
+setOnce(2120, "Interface\Icons\Spell_Fire_SelfDestruct")
+setOnce(11113, "Interface\Icons\Spell_Holy_Excorcism_02")
+setOnce(120, "Interface\Icons\Spell_Frost_IceShock")
+setOnce(10, "Interface\Icons\Spell_Frost_IceStorm")

@@ -124,29 +124,81 @@ end
 
 -- DPS Priorities (existing style, trimmed)
 
-local function BuildQueue()
+local function ShouldUseAoE()
+  if not (TR and TR.db and TR.db.profile and TR.db.profile.aoe) then
+    return false
+  end
+  return true
+end
+
+local function BuildSingleTargetQueue(level)
   local q = {}
   local tree = PrimaryTab()
 
-  if A.Corruption and not DebuffUpID("target", A.Corruption) and ReadySoon(A.Corruption) then Push(q, A.Corruption) end
-  if A.CurseOfAgony and not DebuffUpID("target", A.CurseOfAgony) and ReadySoon(A.CurseOfAgony) then Push(q, A.CurseOfAgony) end
+  if level < 6 then
+    if A and ReadySoon(A.ShadowBolt) then Push(q, A.ShadowBolt) end
 
-  if A.UnstableAffliction and not DebuffUpID("target", A.UnstableAffliction) and ReadySoon(A.UnstableAffliction) then
-    Push(q, A.UnstableAffliction)
-  end
+  elseif level < 14 then
+    if A.Corruption and not DebuffUpID("target", A.Corruption) and ReadySoon(A.Corruption) then Push(q, A.Corruption) end
+    if A and ReadySoon(A.ShadowBolt) then Push(q, A.ShadowBolt) end
 
-  if tree == 3 then
-    if A.Immolate and not DebuffUpID("target", A.Immolate) and ReadySoon(A.Immolate) then Push(q, A.Immolate) end
-    if A.Conflagrate and DebuffUpID("target", A.Immolate) and ReadySoon(A.Conflagrate) then Push(q, A.Conflagrate) end
-  end
+  elseif level < 28 then
+    if A.Corruption and not DebuffUpID("target", A.Corruption) and ReadySoon(A.Corruption) then Push(q, A.Corruption) end
+    if A.CurseOfAgony and not DebuffUpID("target", A.CurseOfAgony) and ReadySoon(A.CurseOfAgony) then Push(q, A.CurseOfAgony) end
+    if tree == 3 and A.Immolate and not DebuffUpID("target", A.Immolate) and ReadySoon(A.Immolate) then Push(q, A.Immolate) end
+    if A and ReadySoon(A.ShadowBolt) then Push(q, A.ShadowBolt) end
 
-  if A.ShadowBolt and ReadySoon(A.ShadowBolt) then Push(q, A.ShadowBolt) end
-
-  if UnitPower("player", 0) / UnitPowerMax("player", 0) < 0.2 and A.LifeTap and ReadySoon(A.LifeTap) then
-    Push(q, A.LifeTap)
+  else
+    if A.Corruption and not DebuffUpID("target", A.Corruption) and ReadySoon(A.Corruption) then Push(q, A.Corruption) end
+    if A.CurseOfAgony and not DebuffUpID("target", A.CurseOfAgony) and ReadySoon(A.CurseOfAgony) then Push(q, A.CurseOfAgony) end
+    if A.UnstableAffliction and not DebuffUpID("target", A.UnstableAffliction) and ReadySoon(A.UnstableAffliction) then Push(q, A.UnstableAffliction) end
+    if tree == 3 then
+      if A.Immolate and not DebuffUpID("target", A.Immolate) and ReadySoon(A.Immolate) then Push(q, A.Immolate) end
+      if A.Conflagrate and DebuffUpID("target", A.Immolate) and ReadySoon(A.Conflagrate) then Push(q, A.Conflagrate) end
+    end
+    if A and ReadySoon(A.ShadowBolt) then Push(q, A.ShadowBolt) end
+    if UnitPower("player", 0) / UnitPowerMax("player", 0) < 0.2 and A.LifeTap and ReadySoon(A.LifeTap) then
+      Push(q, A.LifeTap)
+    end
   end
 
   return q
+end
+
+local function BuildAoEQueue(level)
+  local q = {}
+  local tree = PrimaryTab()
+
+  if level < 22 then
+    if A.Corruption and not DebuffUpID("target", A.Corruption) and ReadySoon(A.Corruption) then Push(q, A.Corruption) end
+    if A and ReadySoon(A.ShadowBolt) then Push(q, A.ShadowBolt) end
+
+  elseif level < 38 then
+    if A and ReadySoon(A.RainofFire) then Push(q, A.RainofFire) end
+
+  else
+    if level >= 38 and A and A.Seed then
+      if not DebuffUpID("target", A.Seed) and ReadySoon(A.Seed) then Push(q, A.Seed) end
+    end
+    if tree == 3 and level >= 30 and A and ReadySoon(A.Hellfire) then
+      Push(q, A.Hellfire)
+    end
+    if A and ReadySoon(A.RainofFire) then Push(q, A.RainofFire) end
+    if UnitPower("player",0)/UnitPowerMax("player",0) < 0.3 and A.LifeTap and ReadySoon(A.LifeTap) then
+      Push(q, A.LifeTap)
+    end
+  end
+
+  return q
+end
+
+local function BuildQueue()
+  local level = UnitLevel("player")
+  if ShouldUseAoE() then
+    return BuildAoEQueue(level)
+  else
+    return BuildSingleTargetQueue(level)
+  end
 end
 
 -- Add keybind updates to existing engine recommendations

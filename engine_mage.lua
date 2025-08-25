@@ -89,25 +89,99 @@ local function BuildBuffQueue()
   return q
 end
 
--- DPS
-local function BuildQueue()
+-- Helper to detect if we're in an AoE situation
+local function ShouldUseAoE()
+  if not (TR and TR.db and TR.db.profile and TR.db.profile.aoe) then
+    return false
+  end
+  return true
+end
+
+local function BuildSingleTargetQueue(level)
   local q = {}
   local tab = PrimaryTab()
-  if tab == 1 then
-    if A and ReadySoon(A.ArcaneMissiles) and BuffUpID("player", 44401) then Push(q, A.ArcaneMissiles) end
-    if A and ReadySoon(A.ArcaneBlast) then Push(q, A.ArcaneBlast) end
-    if A and ReadySoon(A.ArcaneBarrage) then Push(q, A.ArcaneBarrage) end
-  elseif tab == 2 then
-    if A and ReadySoon(A.Pyroblast) and BuffUpID("player", 48108) then Push(q, A.Pyroblast) end
-    if A and A.LivingBomb and not DebuffUpID("target", A.LivingBomb) and ReadySoon(A.LivingBomb) then Push(q, A.LivingBomb) end
-    if A and ReadySoon(A.Fireball) then Push(q, A.Fireball) end
-    if A and ReadySoon(A.Scorch) then Push(q, A.Scorch) end
-  else
-    if A and ReadySoon(A.FrostfireBolt) and BuffUpID("player", 57761) then Push(q, A.FrostfireBolt) end
-    if A and ReadySoon(A.IceLance) and BuffUpID("player", 44544) then Push(q, A.IceLance) end
+
+  if level < 12 then
     if A and ReadySoon(A.Frostbolt) then Push(q, A.Frostbolt) end
+
+  elseif level < 22 then
+    if tab == 2 and A and ReadySoon(A.Fireball) then
+      Push(q, A.Fireball)
+    else
+      if A and ReadySoon(A.Frostbolt) then Push(q, A.Frostbolt) end
+    end
+
+  elseif level < 36 then
+    if tab == 1 then
+      if A and ReadySoon(A.ArcaneMissiles) then Push(q, A.ArcaneMissiles) end
+    elseif tab == 2 then
+      if A and ReadySoon(A.Scorch) then Push(q, A.Scorch) end
+      if A and ReadySoon(A.Fireball) then Push(q, A.Fireball) end
+    else
+      if A and ReadySoon(A.Frostbolt) then Push(q, A.Frostbolt) end
+    end
+
+  else
+    if tab == 1 then
+      if A and ReadySoon(A.ArcaneMissiles) and BuffUpID("player", 44401) then Push(q, A.ArcaneMissiles) end
+      if A and ReadySoon(A.ArcaneBlast) then Push(q, A.ArcaneBlast) end
+      if A and ReadySoon(A.ArcaneBarrage) then Push(q, A.ArcaneBarrage) end
+    elseif tab == 2 then
+      if A and ReadySoon(A.Pyroblast) and BuffUpID("player", 48108) then Push(q, A.Pyroblast) end
+      if A and A.LivingBomb and not DebuffUpID("target", A.LivingBomb) and ReadySoon(A.LivingBomb) then Push(q, A.LivingBomb) end
+      if A and ReadySoon(A.Fireball) then Push(q, A.Fireball) end
+      if A and ReadySoon(A.Scorch) then Push(q, A.Scorch) end
+    else
+      if A and ReadySoon(A.FrostfireBolt) then Push(q, A.FrostfireBolt) end
+      if A and ReadySoon(A.Frostbolt) then Push(q, A.Frostbolt) end
+      if A and ReadySoon(A.IceLance) then Push(q, A.IceLance) end
+    end
   end
-  return pad3(q, SAFE)
+
+  return q
+end
+
+local function BuildAoEQueue(level)
+  local q = {}
+  local tab = PrimaryTab()
+
+  if level < 14 then
+    if A and ReadySoon(A.Frostbolt) then Push(q, A.Frostbolt) end
+
+  elseif level < 20 then
+    if A and ReadySoon(A.ArcaneExplosion) then Push(q, A.ArcaneExplosion) end
+
+  elseif level < 28 then
+    if tab == 2 and A and ReadySoon(A.Flamestrike) then
+      Push(q, A.Flamestrike)
+    else
+      if A and ReadySoon(A.ArcaneExplosion) then Push(q, A.ArcaneExplosion) end
+    end
+
+  else
+    if tab == 1 then
+      if A and ReadySoon(A.ArcaneExplosion) then Push(q, A.ArcaneExplosion) end
+    elseif tab == 2 then
+      if A and ReadySoon(A.Flamestrike) then Push(q, A.Flamestrike) end
+      if level >= 30 and A and ReadySoon(A.BlastWave) then Push(q, A.BlastWave) end
+      if A and ReadySoon(A.ArcaneExplosion) then Push(q, A.ArcaneExplosion) end
+    else
+      if level >= 26 and A and ReadySoon(A.ConeOfCold) then Push(q, A.ConeOfCold) end
+      if level >= 30 and A and ReadySoon(A.Blizzard) then Push(q, A.Blizzard) end
+      if A and ReadySoon(A.ArcaneExplosion) then Push(q, A.ArcaneExplosion) end
+    end
+  end
+
+  return q
+end
+
+local function BuildQueue()
+  local level = UnitLevel("player")
+  if ShouldUseAoE() then
+    return BuildAoEQueue(level)
+  else
+    return BuildSingleTargetQueue(level)
+  end
 end
 
 function TR:EngineTick_Mage()
