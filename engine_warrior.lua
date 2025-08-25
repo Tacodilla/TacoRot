@@ -81,30 +81,89 @@ end
 -- core priorities
 
 local function Rage() return UnitPower("player",1) or 0 end
-local function BuildQueue()
+
+-- Helper to detect if we're in an AoE situation
+local function ShouldUseAoE()
+  if not (TR and TR.db and TR.db.profile and TR.db.profile.aoe) then
+    return false
+  end
+  return true
+end
+
+local function BuildSingleTargetQueue(level)
   local q = {}
   local tree = PrimaryTab() -- 1 Arms, 2 Fury
-  
-  -- Auto attack first if not active and in range
+  local rage = Rage()
+
+  -- Auto attack always first if in melee
   if InMelee() and not AutoAttackActive() then
-    table.insert(q, 1, 6603) -- Attack spell ID
+    table.insert(q, 1, 6603)
   end
-  
-  if tree == 1 then
+
+  if level < 16 then
+    if rage > 15 and A and ReadySoon(A.HeroicStrike) then Push(q, A.HeroicStrike) end
+
+  elseif level < 31 then
     if A and A.Rend and not DebuffUpID("target", A.Rend) and ReadySoon(A.Rend) then Push(q, A.Rend) end
     if A and ReadySoon(A.Overpower) then Push(q, A.Overpower) end
-    if A and ReadySoon(A.MortalStrike) then Push(q, A.MortalStrike) end
-    if A and UnitHealth("target")>1 and (UnitHealth("target")/UnitHealthMax("target"))<=0.2 and ReadySoon(A.Execute) then Push(q, A.Execute) end
-    if A and ReadySoon(A.Slam) then Push(q, A.Slam) end
-    if A and Rage()>50 and ReadySoon(A.HeroicStrike) then Push(q, A.HeroicStrike) end
+    if rage > 30 and A and ReadySoon(A.HeroicStrike) then Push(q, A.HeroicStrike) end
+
+  elseif level < 46 then
+    if tree == 1 and A and ReadySoon(A.MortalStrike) then Push(q, A.MortalStrike) end
+    if tree == 2 and A and ReadySoon(A.Bloodthirst) then Push(q, A.Bloodthirst) end
+    if A and A.Rend and not DebuffUpID("target", A.Rend) and ReadySoon(A.Rend) then Push(q, A.Rend) end
+    if A and ReadySoon(A.Overpower) then Push(q, A.Overpower) end
+    if rage > 40 and A and ReadySoon(A.HeroicStrike) then Push(q, A.HeroicStrike) end
+
   else
-    if A and ReadySoon(A.Bloodthirst) then Push(q, A.Bloodthirst) end
-    if A and ReadySoon(A.Whirlwind) then Push(q, A.Whirlwind) end
-    if A and ReadySoon(A.Slam) then Push(q, A.Slam) end
-    if A and UnitHealth("target")>1 and (UnitHealth("target")/UnitHealthMax("target"))<=0.2 and ReadySoon(A.Execute) then Push(q, A.Execute) end
-    if A and Rage()>50 and ReadySoon(A.HeroicStrike) then Push(q, A.HeroicStrike) end
+    local targetHealthPct = UnitHealth("target") / UnitHealthMax("target")
+    if UnitHealth("target") > 1 and targetHealthPct <= 0.2 and A and ReadySoon(A.Execute) then Push(q, A.Execute) end
+    if tree == 1 then
+      if A and ReadySoon(A.MortalStrike) then Push(q, A.MortalStrike) end
+      if A and A.Rend and not DebuffUpID("target", A.Rend) and ReadySoon(A.Rend) then Push(q, A.Rend) end
+      if A and ReadySoon(A.Overpower) then Push(q, A.Overpower) end
+      if A and ReadySoon(A.Slam) then Push(q, A.Slam) end
+    else
+      if A and ReadySoon(A.Bloodthirst) then Push(q, A.Bloodthirst) end
+      if A and ReadySoon(A.Whirlwind) then Push(q, A.Whirlwind) end
+      if A and ReadySoon(A.Slam) then Push(q, A.Slam) end
+    end
+    if rage > 50 and A and ReadySoon(A.HeroicStrike) then Push(q, A.HeroicStrike) end
   end
+
   return q
+end
+
+local function BuildAoEQueue(level)
+  local q = {}
+  local rage = Rage()
+
+  if InMelee() and not AutoAttackActive() then
+    table.insert(q, 1, 6603)
+  end
+
+  if level < 36 then
+    if rage > 20 and A and ReadySoon(A.HeroicStrike) then Push(q, A.HeroicStrike) end
+  else
+    if A and ReadySoon(A.Whirlwind) then Push(q, A.Whirlwind) end
+    if level >= 46 then
+      local tree = PrimaryTab()
+      if tree == 1 and A and ReadySoon(A.SweepingStrikes) then Push(q, A.SweepingStrikes) end
+    end
+    if rage > 30 and A and ReadySoon(A.HeroicStrike) then Push(q, A.HeroicStrike) end
+    if A and ReadySoon(A.Slam) then Push(q, A.Slam) end
+  end
+
+  return q
+end
+
+local function BuildQueue()
+  local level = UnitLevel("player")
+  if ShouldUseAoE() then
+    return BuildAoEQueue(level)
+  else
+    return BuildSingleTargetQueue(level)
+  end
 end
 
 -- tick

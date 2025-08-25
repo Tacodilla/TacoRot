@@ -7,6 +7,7 @@ TR_IDS.Ability = {
   Immolate   = 348,
   SearingPain= 5676,
   RainofFire = 5740,
+  Hellfire   = 1949,
   LifeTap    = 1454,
   ShadowWard = 6229,
   Incinerate = 29722,
@@ -28,6 +29,7 @@ TR_IDS.Rank = {
   Immolate   = {348,707,1094,2941,11665,11667,11668,25309},
   SearingPain= {5676,17919,17920,17921,17922,17923},
   RainofFire = {5740,6219,11677,11678},
+  Hellfire   = {1949,11683,11684,27213,47823},
   LifeTap    = {1454,1455,1456,11687,11688,11689},
   ShadowWard = {6229,11739,11740,28610},
   Incinerate = {29722,32231,47837,47838},
@@ -85,6 +87,7 @@ setOnce(172,   "Interface\\Icons\\Spell_Shadow_AbominationExplosion") -- Corrupt
 setOnce(348,   "Interface\\Icons\\Spell_Fire_Immolation")
 setOnce(5676,  "Interface\\Icons\\Spell_Fire_SoulBurn")               -- Searing Pain
 setOnce(5740,  "Interface\\Icons\\Spell_Shadow_RainOfFire")
+setOnce(1949,  "Interface\\Icons\\Spell_Fire_Incinerate")
 setOnce(1454,  "Interface\\Icons\\Spell_Shadow_BurningSpirit")        -- Life Tap
 setOnce(6229,  "Interface\\Icons\\Spell_Shadow_AntiShadow")           -- Shadow Ward
 setOnce(29722, "Interface\\Icons\\Spell_Fire_FlameShock")             -- Incinerate (approx)

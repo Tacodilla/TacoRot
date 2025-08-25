@@ -8,11 +8,13 @@ local IDS = {
     ArcaneShot    = 3044,
     AimedShot     = 19434,
     MultiShot     = 2643,
+    Volley        = 1510,
     RapidFire     = 3045,
     RaptorStrike  = 2973,
     WingClip      = 2974,
     AutoShot      = 75,
     SteadyShot    = 34120,
+    ExplosiveShot = 49049,
   },
   Rank = {
     -- All ranks below are valid in 3.3.5
@@ -21,11 +23,13 @@ local IDS = {
     ArcaneShot    = {3044,14281,14282,14283,14284,14285,14286,14287,25291,27019},
     AimedShot     = {19434,20900,20901,20902,20903,20904,27065},
     MultiShot     = {2643,14288,14289,14290,25294,27021},
+    Volley        = {1510,14294,14295,27022},
     RapidFire     = {3045},
     RaptorStrike  = {2973,14260,14261,14262,14263,14264,14265,14266},
     WingClip      = {2974,14267,14268},
     AutoShot      = {75},
     SteadyShot    = {34120},
+    ExplosiveShot = {49049,49050,49051},
   },
 }
 
@@ -71,6 +75,8 @@ setOnce(1978,  "Interface\\Icons\\Ability_Hunter_Quickshot")
 setOnce(3044,  "Interface\\Icons\\Ability_ImpalingBolt")
 setOnce(19434, "Interface\\Icons\\INV_Spear_07")
 setOnce(2643,  "Interface\\Icons\\INV_Ammo_Arrow_02")
+setOnce(1510,  "Interface\\Icons\\Ability_UpgradeMoonGlaive")
+setOnce(49049, "Interface\\Icons\\Ability_Hunter_ExplosiveShot")
 setOnce(1130,  "Interface\\Icons\\Ability_Hunter_SniperShot")
 setOnce(2974,  "Interface\\Icons\\Ability_Rogue_Trip")
 setOnce(3045,  "Interface\\Icons\\Ability_Hunter_RunningShot")

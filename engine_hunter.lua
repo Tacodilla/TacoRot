@@ -90,75 +90,85 @@ local function Fallback()
   return (A and A.AutoShot) or (A and A.RaptorStrike) or SAFE
 end
 
+-- Helper to detect if we're in an AoE situation
+local function ShouldUseAoE()
+  if not (TR and TR.db and TR.db.profile and TR.db.profile.aoe) then
+    return false
+  end
+  return true
+end
+
+local function BuildSingleTargetQueue(level)
+  local q = {}
+
+  if level < 10 then
+    if InMelee() then
+      if A and ReadySoon(A.RaptorStrike) then Push(q, A.RaptorStrike) end
+    else
+      if A and A.AutoShot and not AutoShotActive() then Push(q, A.AutoShot) end
+    end
+
+  elseif level < 20 then
+    if not UnitAffectingCombat("player") and A and A.HuntersMark and not DebuffUpID("target", A.HuntersMark) and ReadySoon(A.HuntersMark) then
+      Push(q, A.HuntersMark)
+    end
+    if A and ReadySoon(A.ArcaneShot) then Push(q, A.ArcaneShot) end
+    if not InMelee() and A and A.AutoShot and not AutoShotActive() then Push(q, A.AutoShot) end
+
+  elseif level < 40 then
+    if not UnitAffectingCombat("player") and A and A.HuntersMark and not DebuffUpID("target", A.HuntersMark) and ReadySoon(A.HuntersMark) then
+      Push(q, A.HuntersMark)
+    end
+    if A and ReadySoon(A.AimedShot) then Push(q, A.AimedShot) end
+    if A and A.SerpentSting and not DebuffUpID("target", A.SerpentSting) and ReadySoon(A.SerpentSting) then Push(q, A.SerpentSting) end
+    if A and ReadySoon(A.ArcaneShot) then Push(q, A.ArcaneShot) end
+    if not InMelee() and A and A.AutoShot and not AutoShotActive() then Push(q, A.AutoShot) end
+
+  else
+    if not UnitAffectingCombat("player") and A and A.HuntersMark and not DebuffUpID("target", A.HuntersMark) and ReadySoon(A.HuntersMark) then
+      Push(q, A.HuntersMark)
+    end
+    if A and ReadySoon(A.AimedShot) then Push(q, A.AimedShot) end
+    if A and A.SerpentSting and not DebuffUpID("target", A.SerpentSting) and ReadySoon(A.SerpentSting) then Push(q, A.SerpentSting) end
+    if A and ReadySoon(A.SteadyShot) then Push(q, A.SteadyShot) end
+    if A and ReadySoon(A.ArcaneShot) then Push(q, A.ArcaneShot) end
+    if not InMelee() and A and A.AutoShot and not AutoShotActive() then Push(q, A.AutoShot) end
+  end
+
+  return q
+end
+
+local function BuildAoEQueue(level)
+  local q = {}
+
+  if level < 18 then
+    if A and ReadySoon(A.ArcaneShot) then Push(q, A.ArcaneShot) end
+    if not InMelee() and A and A.AutoShot and not AutoShotActive() then Push(q, A.AutoShot) end
+
+  elseif level < 30 then
+    if A and ReadySoon(A.MultiShot) then Push(q, A.MultiShot) end
+    if A and ReadySoon(A.ArcaneShot) then Push(q, A.ArcaneShot) end
+
+  else
+    if A and ReadySoon(A.MultiShot) then Push(q, A.MultiShot) end
+    if level >= 36 and A and ReadySoon(A.Volley) then Push(q, A.Volley) end
+    if A and ReadySoon(A.ArcaneShot) then Push(q, A.ArcaneShot) end
+    if level >= 60 and A and ReadySoon(A.ExplosiveShot) then Push(q, A.ExplosiveShot) end
+  end
+
+  return q
+end
+
 local function BuildQueue()
   IDS = ResolveIDS() or IDS
   A = (IDS and IDS.Ability) or A
 
-  local q = {}
-
-  if not HaveTarget() then
-    -- No target: favor pet upkeep out of combat, then show rotation anyway
-    if not UnitAffectingCombat("player") then
-      local pq = BuildPetQueue(); if pq and pq[1] then return pq end
-    end
-    -- Continue to rotation even without target
-  end
-
-  -- Out of combat buffs/setup
-  if not UnitAffectingCombat("player") then
-    if A and ReadySoon(A.HuntersMark) and not DebuffUpID("target", A.HuntersMark) then
-      Push(q, A.HuntersMark)
-    end
-  end
-
-  -- High priority abilities
-  if A and A.KillShot and ReadySoon(A.KillShot) then
-    Push(q, A.KillShot)
-  end
-
-  if InMelee() then
-    -- Melee range abilities
-    if A and ReadySoon(A.RaptorStrike) then
-      table.insert(q, 1, A.RaptorStrike)
-    end
-    if #q < 3 and A and ReadySoon(A.WingClip) then
-      Push(q, A.WingClip)
-    end
+  local level = UnitLevel("player")
+  if ShouldUseAoE() then
+    return pad3(BuildAoEQueue(level), Fallback())
   else
-    -- Ranged abilities
-    if A and ReadySoon(A.AimedShot) then
-      Push(q, A.AimedShot)
-    end
-    if A and ReadySoon(A.MultiShot) then
-      Push(q, A.MultiShot)
-    end
-    if A and ReadySoon(A.ArcaneShot) then
-      Push(q, A.ArcaneShot)
-    end
-    if A and ReadySoon(A.SteadyShot) then
-      Push(q, A.SteadyShot)
-    end
-
-    -- Serpent Sting if not already on target
-    if #q < 3 and A and A.SerpentSting and not DebuffUpID("target", A.SerpentSting) and ReadySoon(A.SerpentSting) then
-      Push(q, A.SerpentSting)
-    end
-  end -- end else (ranged)
-
-  -- Auto Shot if nothing else and not active
-  if #q < 1 and A and A.AutoShot and not AutoShotActive() then
-    Push(q, A.AutoShot)
+    return pad3(BuildSingleTargetQueue(level), Fallback())
   end
-
-  -- Only after prioritizing Auto Shot / Raptor logic, insert pet suggestions if nothing critical was queued
-  if not UnitAffectingCombat("player") and (#q == 0) then
-    local pq = BuildPetQueue()
-    if pq and pq[1] then
-      q = pq
-    end
-  end
-
-  return pad3(q, Fallback())
 end
 
 -- Add keybind updates to existing engine recommendations
